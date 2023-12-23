@@ -1,0 +1,23 @@
+/**
+
+=========================================================
+** Custom General styling
+=========================================================
+
+**/
+
+html {
+}
+
+body {
+    font-family: $body-font;
+    letter-spacing: rem(-0.5);
+}
+
+@layer components {
+    .header-nav--menu {
+        .active {
+            @apply bg-primary-700 text-white lg:text-black lg:bg-white;
+        }
+    }
+}
