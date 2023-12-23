@@ -5,6 +5,8 @@ import Layout from "./Layout.astro";
 import SectionContainer from "@/components/SectionContainer.astro";
 import { SITE } from "@config";
 import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
+import readingTime from "reading-time";
+import ReadingTime from 'phosphor-astro/BookOpen.astro'
 
 export interface Props {
     post: CollectionEntry<"blog">;
@@ -52,6 +54,7 @@ const { Content } = await post.render();
                             <FormattedDate date={pubDate} />
                         </span>
                     </span>
+                    
                     {
                         updatedDate && (
                             <div class="last-updated-on">
@@ -60,6 +63,7 @@ const { Content } = await post.render();
                             </div>
                         )
                     }
+                     
                     {
                         heroImage && (
                             <img
@@ -70,9 +74,15 @@ const { Content } = await post.render();
                             />
                         )
                     }
+                    
+                        <div class="flex items-center gap-2 ">
+                            <ReadingTime class="h-6 w-6 inline opacity-60"/>
+                            <h6><span class="text-zinc-500">Reading time:</span> {readingTime(Content.toString()).text}</h6>
+                        </div>
                     <div
                         class="prose-code:whitespace-pre-wrap prose-code:break-words prose-code:overflow-x-auto"
                     >
+                   
                         <Content />
                     </div>
                 </article>

@@ -12,19 +12,21 @@ import { sandpackDark } from "@codesandbox/sandpack-themes";
 
 export const CodeComponent = () => {
     return (
-        <div>
+        <SandpackProvider>
             <Sandpack
                 theme={sandpackDark}
-                template="astro"
+                template="vanilla-ts"
                 options={{
                     showConsoleButton: true,
                     showInlineErrors: true,
                     showNavigator: true,
                     showLineNumbers: true,
                     showTabs: true,
-                    editorHeight: "400px"
+                    editorHeight: "400px",
+                    activeFile: "/index.html",
+                    visibleFiles: ["/index.html", "/index.ts"]
                 }}
             />
-        </div>
+        </SandpackProvider>
     );
 };
