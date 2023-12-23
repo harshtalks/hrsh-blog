@@ -55,6 +55,9 @@ devDependencies:
   '@tailwindcss/typography':
     specifier: ^0.5.9
     version: 0.5.10(tailwindcss@3.4.0)
+  '@types/svgo':
+    specifier: ^3.0.0
+    version: 3.0.0
   astro-icon:
     specifier: ^0.8.2
     version: 0.8.2
@@ -1217,6 +1220,13 @@ packages:
 
   /@types/scheduler@0.16.8:
     resolution: {integrity: sha512-WZLiwShhwLRmeV6zH+GkbOFT6Z6VklCItrDioxUnv+u4Ll+8vKeFySoFyK/0ctcRpOmwAicELfmys1sDc/Rw+A==}
+    dev: true
+
+  /@types/svgo@3.0.0:
+    resolution: {integrity: sha512-G5qLWNq/rMvSM1EyY4E2iEd+s9km/PxLkzPkA2lghrgWJ2jrVMuB1ZsGOzL4YAWCy5sAoUw7SEQseHE2qypF2w==}
+    deprecated: This is a stub types definition. svgo provides its own type definitions, so you do not need this installed.
+    dependencies:
+      svgo: 2.8.0
     dev: true
 
   /@types/unist@2.0.10:

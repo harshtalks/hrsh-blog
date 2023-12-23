@@ -45,6 +45,7 @@
         "@astrojs/react": "^3.0.8",
         "@iconify-json/mdi": "^1.1.63",
         "@tailwindcss/typography": "^0.5.9",
+        "@types/svgo": "^3.0.0",
         "astro-icon": "^0.8.2",
         "autoprefixer": "^10.4.13",
         "clsx": "^1.2.1",
