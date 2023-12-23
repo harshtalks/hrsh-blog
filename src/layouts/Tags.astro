@@ -2,9 +2,9 @@
 import FormattedDate from "@/components/FormattedDate.astro";
 import Layout from "@/layouts/Layout.astro";
 import SectionContainer from "@/components/SectionContainer.astro";
-import { Icon } from "astro-icon";
 import { SITE } from "@config";
-import { CollectionEntry } from "astro:content";
+import {type CollectionEntry } from "astro:content";
+import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
 
 export interface Props {
     posts: CollectionEntry<"blog">[];
@@ -27,7 +27,7 @@ const { posts, title, tag } = Astro.props;
                 href="/"
                 class="font-medium flex no-underline text-neutral-500 mb-8"
             >
-                <Icon name="ph:arrow-left-light" class="w-6 h-6 mr-4" />
+                <ArrowLeftLight class="w-6 h-6 mr-4" />
                 Back to home
             </a>
             <h2

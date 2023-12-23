@@ -2,7 +2,6 @@
 import Layout from "@/layouts/Layout.astro";
 import SectionContainer from "@/components/SectionContainer.astro";
 import { getCollection } from "astro:content";
-import { Icon } from "astro-icon";
 import getSortedTags from "@/utils/getSortedTags";
 import {Image} from 'astro:assets'
 
@@ -17,7 +16,9 @@ const sortedPosts = posts
 // @ts-ignore
 import HarshPareek from '../images/harsh.jpeg'
 import FormattedDate from "@/components/FormattedDate.astro";
-
+import ArrowRightLight from 'phosphor-astro/ArrowRightLight.astro'
+import Hash from 'phosphor-astro/HashDuotone.astro'
+import Social from "@/components/Social.astro";
 
 ---
 
@@ -25,6 +26,7 @@ import FormattedDate from "@/components/FormattedDate.astro";
     title="Harsh Pareek"
     description="Astro Lane is a customizable blog theme that offers minimal styling, making it easy for you to tailor it to your needs. It's a personal portfolio landing template for developers and designers."
 >
+<Social slot="social-icons"/>
     <div
         class="main-wrapper wrap-sm grid gap-16 px-8 md:gap-24 lg:gap-32 mx-auto"
     >
@@ -59,7 +61,7 @@ import FormattedDate from "@/components/FormattedDate.astro";
                 </h2>
                 <a href="/blog" class="font-medium flex no-underline ml-auto">
                     View all blogs
-                    <Icon name="ph:arrow-right-light" class="w-6 h-6 ml-4" />
+                    <ArrowRightLight class="w-6 h-6 ml-4" />
                 </a>
             </div>
 
@@ -105,7 +107,7 @@ import FormattedDate from "@/components/FormattedDate.astro";
 
                 <a href="/tags" class="font-medium flex no-underline ml-auto">
                     View all tags
-                    <Icon name="ph:arrow-right-light" class="w-6 h-6 ml-4" />
+                   <ArrowRightLight class="w-6 h-6 ml-4" />
                 </a>
             </div>
 
@@ -117,7 +119,7 @@ import FormattedDate from "@/components/FormattedDate.astro";
                                 href={`/tags/${tag.toLowerCase()}`}
                                 class={`text-lg pr-2 flex flex-wrap items-center relative underline hover:-top-0.5 hover:text-skin-accent focus-visible:p-1`}
                             >
-                                <Icon name="mdi:hashtag" class="w-6 h-6" />
+                                <Hash class="w-6 h-6" />
                                 &nbsp;<span>{tag.toLowerCase()}</span>
                             </a>
                         </li>

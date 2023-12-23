@@ -2,9 +2,10 @@
 import FormattedDate from "@/components/FormattedDate.astro";
 import Layout from "@/layouts/Layout.astro";
 import SectionContainer from "@/components/SectionContainer.astro";
-import { Icon } from "astro-icon";
 import { SITE } from "@config";
-import { CollectionEntry } from "astro:content";
+import { type CollectionEntry } from "astro:content";
+import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
+import ArrowRightLight from "phosphor-astro/ArrowRightLight.astro";
 
 export interface Props {
     pageNum: number;
@@ -38,7 +39,7 @@ const breadcrumbList = currentUrlPath.split("/").slice(1);
                 href="/"
                 class="font-medium flex no-underline text-neutral-500 mb-8"
             >
-                <Icon name="ph:arrow-left-light" class="w-6 h-6 mr-4" />
+                <ArrowLeftLight class="w-6 h-6 mr-4" />
                 Back to home
             </a>
             {
@@ -106,8 +107,7 @@ const breadcrumbList = currentUrlPath.split("/").slice(1);
                             aria-label="Previous"
                             aria-disabled={prev === "disabled"}
                         >
-                            <Icon
-                                name="ph:arrow-left-light"
+                            <ArrowLeftLight
                                 class="w-6 h-6 mr-4"
                             />
                             Prev
@@ -124,8 +124,7 @@ const breadcrumbList = currentUrlPath.split("/").slice(1);
                             aria-disabled={next === "disabled"}
                         >
                             Next
-                            <Icon
-                                name="ph:arrow-right-light"
+                            <ArrowRightLight
                                 class="w-6 h-6 ml-4"
                             />
                         </a>

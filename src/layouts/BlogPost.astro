@@ -3,8 +3,8 @@ import type { CollectionEntry } from "astro:content";
 import FormattedDate from "../components/FormattedDate.astro";
 import Layout from "./Layout.astro";
 import SectionContainer from "@/components/SectionContainer.astro";
-import { Icon } from "astro-icon";
 import { SITE } from "@config";
+import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
 
 export interface Props {
     post: CollectionEntry<"blog">;
@@ -37,7 +37,7 @@ const { Content } = await post.render();
                         class="blog-back-button cursor-pointer text-neutral-500 flex no-underline mb-16"
                         href="/blog/"
                     >
-                        <Icon name="ph:arrow-left-light" class="w-6 h-6 mr-4" />
+                        <ArrowLeftLight  class="w-6 h-6 mr-4" />
                         Back
                     </a>
                     <div class="post--title">

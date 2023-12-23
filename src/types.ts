@@ -1,3 +1,5 @@
+import type { Props } from "astro";
+
 export type Site = {
     siteUrl: string;
     author: string;
@@ -11,7 +13,7 @@ export type Site = {
 export type SocialMediaObjects = {
     name: SocialMediaTypes;
     href: string;
-    icon?: string;
+    Icon?: (_props: Props) => t;
     active: boolean;
     title: string;
 }[];

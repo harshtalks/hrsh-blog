@@ -1,0 +1,111 @@
+---
+import { SITE } from "@config";
+import type { SocialMediaObjects } from "types";
+import Github from "phosphor-astro/GithubLogoDuotone.astro";
+import Instagram from "phosphor-astro/InstagramLogoDuotone.astro";
+import Linkedin from "phosphor-astro/linkedinLogoDuotone.astro";
+import Twitter from "phosphor-astro/TwitterLogoDuotone.astro";
+import Mail from "phosphor-astro/PaperPlaneTiltDuotone.astro";
+import Calendar from "phosphor-astro/CalendarCheckDuotone.astro";
+
+
+
+
+const SOCIALS: SocialMediaObjects = [
+    {
+        name: "Github",
+        href: "https://github.com/harshtalks/",
+        Icon: Github,
+        title: `Follow ${SITE.author} on Github`,
+        active: true
+    },
+    {
+        name: "Facebook",
+        href: "https://github.com/christian-luntok/astro-lane/",
+        title: `Follow ${SITE.title} on Facebook`,
+        active: false
+    },
+    {
+        name: "Instagram",
+        href: "https://instagram.com/harshtalks",
+        Icon: Instagram,
+        title: `Follow ${SITE.author} on Instagram`,
+        active: true
+    },
+    {
+        name: "LinkedIn",
+        href: "https://github.com/christian-luntok/astro-lane/",
+        Icon: Linkedin,
+        title: `Follow ${SITE.title} on LinkedIn`,
+        active: true
+    },
+    {
+        name: "Mail",
+        href: "mailto:harshpareek.works@gmail.com",
+        title: `Send an email to ${SITE.title}`,
+        Icon: Mail,
+        active: true
+    },
+    {
+        name: "Twitter",
+        href: "https://x.com/harshstalks",
+        Icon: Twitter,
+        title: `Follow ${SITE.author} on Twitter`,
+        active: true
+    },
+    {
+        name: "YouTube",
+        href: "https://github.com/christian-luntok/astro-lane/",
+        title: `${SITE.title} on YouTube`,
+        active: false
+    },
+    {
+        name: "WhatsApp",
+        href: "https://github.com/christian-luntok/astro-lane/",
+        title: `${SITE.title} on WhatsApp`,
+        active: false
+    },
+    {
+        name: "Snapchat",
+        href: "https://github.com/christian-luntok/astro-lane/",
+        title: `${SITE.title} on Snapchat`,
+        active: false
+    },
+    
+    {
+        name: "Cal.com",
+        href: "https://cal.com/harshisavailable",
+        Icon: Calendar,
+        title: `${SITE.title} on Cal.com`,
+        active: true
+    }
+];
+
+---
+ <div class="footer-credits text-neutral-500">
+       <a
+                            class="block text-xl md:text-5xl lg:text-4xl font-medium mb-2 md:mb-8 lg:mb-4 leading-10 tracking-tighter relative hover:underline hover:-top-0.5 hover:text-skin-accent hover:text-black focus-visible:p-1"
+                            href="mailto:harshpareek.works@gmail.com"
+                        >
+                           harshpareek.works@gmail.com
+        </a>
+                     
+                        <div
+                            class="footer-socials font-medium flex gap-6 md:gap-10 max-w-md text-xl md:text-3xl lg:text-2xl leading-10 tracking-tighter"
+                        >
+                            {
+                                SOCIALS.filter((social) => social.active).map(
+                                    ({href,title,Icon}) => (
+                                        <a
+                                            href={href}
+                                            class="relative hover:underline hover:-top-0.5 duration-500 transition-all ease-in-out hover:text-skin-accent hover:text-black focus-visible:p-1 flex items-center"
+                                            target="_blank"
+                                            title={title}
+                                        >
+                                            {Icon && <Icon class:list={["h-10 w-10 inline"]}/>}
+                                        </a>
+                                    )
+                                )
+                            }
+                        </div>
+</div>
