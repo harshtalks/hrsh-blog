@@ -1,0 +1,20 @@
+---
+title: "Boost Your Site Speed: Put Scripts on a Diet with Service Workers"
+description: Service workers provide a little-known opportunity to run third party scripts like Google Analytics off the main thread. This can seriously improve page load speed.
+pubDate: 2023-12-23
+tags:
+    - performance
+    - service workers
+draft: false
+featured: true
+---
+
+Building modern web applications is no less complicated than writing a thesis. There was a time when we could just spin up an ec2 instance and put our static html, css and little bit of Javascript (Yes, using javascript instead of TS was not really a crime back then) but we are past that era. For a single page website with zero to little client interactivity, we tend to rely on meta frameworks like Next.js. Next.js is a great framework but it can be a terrible choice if you are using it for a marketing landing page or even your personal blog.
+
+<br />
+
+Meta frameworks like Next.js need to download a whole lot of javascript to make your website interactive which is terrible for <a className="text-zinc-900" href="https://web.dev/articles/tti"  target="_blank">Time to Interatcive</a> (TTI) web vital.
+
+import { CodeComponent } from "../../components/react/Code";
+
+<CodeComponent client:visible />
