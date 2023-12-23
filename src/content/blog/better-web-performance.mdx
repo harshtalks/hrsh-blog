@@ -11,10 +11,14 @@ featured: true
 
 Building modern web applications is no less complicated than writing a thesis. There was a time when we could just spin up an ec2 instance and put our static html, css and little bit of Javascript (Yes, using javascript instead of TS was not really a crime back then) but we are past that era. For a single page website with zero to little client interactivity, we tend to rely on meta frameworks like Next.js. Next.js is a great framework but it can be a terrible choice if you are using it for a marketing landing page or even your personal blog.
 
-<br />
-
 Meta frameworks like Next.js need to download a whole lot of javascript to make your website interactive which is terrible for <a className="text-zinc-900" href="https://web.dev/articles/tti"  target="_blank">Time to Interatcive</a> (TTI) web vital.
 
-import { CodeComponent } from "../../components/react/Code";
+Those scripts weren't enough, now you also have third party scripts, maybe from the
+google analytics, or hubspot, or your designers want to see whether their over engineered
+ui features getting enough tractions with hotjar. Third party scripts are necessary
+but you should always remember there's only so much you could process with a single
+thread.
 
-<CodeComponent client:visible />
+import Blockquote from "../../components/general/Blockquote.astro";
+
+<Blockquote />

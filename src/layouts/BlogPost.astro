@@ -7,6 +7,7 @@ import { SITE } from "@config";
 import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
 import readingTime from "reading-time";
 import ReadingTime from 'phosphor-astro/BookOpen.astro'
+import HashDuotone from "phosphor-astro/HashDuotone.astro";
 
 export interface Props {
     post: CollectionEntry<"blog">;
@@ -14,7 +15,7 @@ export interface Props {
 
 const { post } = Astro.props;
 
-const { title, description, pubDate, updatedDate, heroImage } = post.data;
+const { title, description, pubDate, updatedDate, heroImage,tags } = post.data;
 
 const ogUrl = new URL(
     heroImage ? heroImage : `${title.replace(/\s+/g, "-").toLowerCase()}.png`,
@@ -42,11 +43,13 @@ const { Content } = await post.render();
                         <ArrowLeftLight  class="w-6 h-6 mr-4" />
                         Back
                     </a>
+                    
                     <div class="post--title">
                         <h1 class="text-3xl md:text-4xl">
                             {title}
                         </h1>
                     </div>
+                    
                     <span
                         class="mb-4 text-sm w-max md:w-auto items-center rounded-full border border-neutral-300 bg-white px-1 py-[2px] font-medium text-primary-500 block md:inline-flex"
                     >
@@ -75,9 +78,9 @@ const { Content } = await post.render();
                         )
                     }
                     
-                        <div class="flex items-center gap-2 ">
+                        <div class="flex items-center gap-2 p-0 m-0">
                             <ReadingTime class="h-6 w-6 inline opacity-60"/>
-                            <h6><span class="text-zinc-500">Reading time:</span> {readingTime(Content.toString()).text}</h6>
+                            <h6>{readingTime(Content.toString()).text}</h6>
                         </div>
                     <div
                         class="prose-code:whitespace-pre-wrap prose-code:break-words prose-code:overflow-x-auto"
@@ -85,7 +88,23 @@ const { Content } = await post.render();
                    
                         <Content />
                     </div>
+                    <ul  class="list-none p-0 m-0">
+                {
+                    tags.map((tag) => (
+                        <li class={`inline-block my-3 underline-offset-8`}>
+                            <a
+                                href={`/tags/${tag.toLowerCase()}`}
+                                class={`text-lg pr-2 flex flex-wrap items-center relative underline hover:-top-0.5 hover:text-skin-accent focus-visible:p-1`}
+                            >
+                                <HashDuotone class="w-6 h-6" />
+                                &nbsp;<span>{tag.toLowerCase()}</span>
+                            </a>
+                        </li>
+                    ))
+                }
+            </ul>
                 </article>
+                
             </div>
         </div>
     </SectionContainer>

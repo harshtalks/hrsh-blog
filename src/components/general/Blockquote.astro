@@ -1,0 +1,28 @@
+---
+type Props = {
+    title:string
+    subtitle:string
+    link:string
+}
+
+import ArrowRightLight from 'phosphor-astro/ArrowRightLight.astro'
+import Quote from 'phosphor-astro/QuotesDuotone.astro'
+
+---
+
+<div class="py-4">
+<div class="border rounded-md p-4 flex flex-col select-none hover:cursor-pointer bg-zinc-100 group hover:-translate-y-2 transition-all duration-200 ease-in-out">
+    <div class="flex items-center gap-2">
+        <Quote class="h-10 w-10"/>
+    <h4 class="text-xl font-normal !m-0">
+        We promise to keep javascript single threaded
+    </h4>
+    </div>
+    <div class="flex items-center gap-2">
+    <p class="m-0">checkout this amazing thread on reddit</p>
+    <a href="https://www.reddit.com/r/ProgrammerHumor/comments/zyvdub/we_promise_to_keep_javascript_single_threaded/" target="_blank">
+        <ArrowRightLight class="h-10 w-10 inline group-hover:translate-x-2 transition-all duration-200 ease-in-out"/>
+    </a>
+</div>
+</div>
+</div>
