@@ -13,7 +13,7 @@ export type Site = {
 export type SocialMediaObjects = {
     name: SocialMediaTypes;
     href: string;
-    Icon?: (_props: Props) => t;
+    Icon?: (_props: Props) => any;
     active: boolean;
     title: string;
 }[];
@@ -34,4 +34,5 @@ export type SocialMediaTypes =
     | "Snapchat"
     | "CodePen"
     | "Discord"
-    | "Cal.com";
+    | "Cal.com"
+    | "onlyfans";

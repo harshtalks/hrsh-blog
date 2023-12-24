@@ -1,0 +1,14 @@
+---
+const skills = [
+    "Typescript", "Javascript", "Go", "React","Next.js","Astro", "REST API Design Patterns","Design Systems","React Performance", "Docker", "System Design", "CSS", "HTMX", 
+]
+---
+
+<div>
+    <div class="flex items-center justify-center">
+        <h2 class="text-lg text-zinc-700">I can help you with</h2>
+    </div>
+    <div class="flex w-full gap-2 md:w-3/5 mx-auto items-center justify-center flex-wrap gap-x-8 gap-y-4">
+        {skills.map(l => <p class="!m-0 text-zinc-400 whitespace-nowrap select:none hover:bg-black hover:text-white">{l}</p>)}
+    </div>
+</div>
