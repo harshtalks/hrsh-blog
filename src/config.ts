@@ -3,14 +3,12 @@
 import type { Site, SocialMediaObjects } from "./types";
 
 export const SITE: Site = {
-    siteUrl: "https:/astro-lane.chrstnl.com/", // Always put "/" at the end of the URL
-    author: "chrstnl",
-    desc: "A personal portfolio landing template for developers and designers.",
-    title: "Astro Lane",
-    ogImage: "images/astro-lane.png",
+    siteUrl: "https://hrsh-writes.vercel.app/", // Always put "/" at the end of the URL
+    author: "Harsh Pareek",
+    desc: "This is my personal blog and I write some stuffs of my head, mostly tech lol",
+    title: "Harsh Pareek",
+    ogImage: "./images/harsh.jpeg",
     keywords:
-        "Personal portfolio, landing page, page template, developer portfoliom designer portfolio",
+        "Personal portfolio, Blog, Tech, Tech Blog, developer portfoliom, designer portfolio",
     postPerPage: 3
 };
-
-// The site uses iconify - you can find icons on https://iconify.design/.
