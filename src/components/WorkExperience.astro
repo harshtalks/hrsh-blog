@@ -1,0 +1,88 @@
+---
+import ArrowUpRight from 'phosphor-astro/ArrowUpRight.astro'
+
+const workExperience = [
+    {
+        duration: {
+            start: "July 2023",
+            end: "Present"
+        },
+        title: "Frontend Engineering Consultant",
+        company: {
+            link: "https://www.trademarkia.com",
+            name: "Trademarkia"
+        },
+        description: [
+            "Realised an exceptional 90.67% reduction in build time, transitioning to an effective runtime caching strategy.",
+            "Achieved an impressive 98.11% decrease in network calls, minimising the network calls during build process."
+        ],
+        skills: [
+            "Typescript",
+            "Next.js",
+            "i18nl",
+            "React",
+            "Tailwind",
+            "RSC"
+        ]
+    },
+    {
+        duration: {
+            start: "May 2023",
+            end: "July 2023"
+        },
+        title: "Frontend Engineering Intern - Summer",
+        company: {
+            link: "https://www.trademarkia.com",
+            name: "Trademarkia"
+        },
+        description: [
+            "Collaborated cross-functionally to gather requirements, design solutions, and deliver high-quality code, fostering effective communication and agile problem-solving.",
+            "Developed a seamless internationalization strategy using Next.js’s i18n, enabling efficient localization across multiple websites hosted on distinct regional domains.",
+            "Worked on devised specialized workflows for diverse product addition scenarios along with enhancing backward compatibility and system efficiency.",
+    ],
+        skills: [
+            "Typescript",
+            "Next.js",
+            "i18nl",
+            "React",
+            "Tailwind",
+            "Firebase"
+        ]
+    }
+]
+---
+
+<div>
+    <!-- Heading  -->
+    <h4 class="text-base">Work Experience</h4>
+    
+    <!-- Content  -->
+    <div class="space-y-12">
+        {
+            workExperience.map(experience => <div class="md:grid space-y-2 md:space-y-0 md:grid-cols-4  md:gap-12">
+            <!-- Duration  -->
+            <div class="text-zinc-500 col-span-1">
+                <p>{experience.duration.start} - {experience.duration.end}</p>
+            </div>
+
+            <!-- Actual Details  -->
+            <div class="space-y-2 col-span-3">
+                <h4 class="!m-0 text-base text-zinc-700">{experience.title}</h4>
+                <div class="flex items-center gap-1">
+                    <a href=`${experience.company.link}` target="_blank" class="!m-0 text-base ">{experience.company.name}</a>
+                    <ArrowUpRight class="h-4 w-4 inline"/>
+                </div>
+                <div class="text-zinc-700 text-sm">
+                    {experience.description.map(el => <p class="!m-0">{el}</p>)}
+                </div>
+                <!-- Skills  -->
+                <div class="text-zinc-500 text-sm flex justify-start items-center gap-3 flex-wrap">
+                    {experience.skills.map((el,i) => 
+                        <p class="!m-0">{el}</p>
+                    )}
+                </div>
+            </div>
+        </div>)
+        }
+    </div>
+</div>

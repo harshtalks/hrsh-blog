@@ -3,6 +3,7 @@
 // all pages through the use of the <SEO /> component.
 import "../styles/globals.scss";
 import SectionContainer from "@/components/SectionContainer.astro";
+import Social from "@/components/Social.astro";
 import SEO from "@/components/seo/SEO.astro";
 
 const currentYear = new Date().getFullYear();
@@ -40,7 +41,7 @@ import { ViewTransitions } from 'astro:transitions';
                     <h2
                         class="font-medium text-6xl lg:text-7xl lg:leading-[70px] tracking-tight lg:tracking-tighter"
                     >
-                        Let&apos;s Build{" "}
+                        Let&apos;s build{" "}
                         <span
                             class="text-neutral-500 inline font-bold underline-offset-4 underline"
                         >
@@ -53,7 +54,7 @@ import { ViewTransitions } from 'astro:transitions';
                     >
                         I'm always looking for good freelance projects, and gigs so if you like my work, just use any of the social links below.
                     </p>
-                    <slot name="social-icons"/>
+                    <Social/>
                     <span
                         class="text-neutral-500 text-md flex flex-wrap gap-4 md:gap-0 md:justify-between"
                     >

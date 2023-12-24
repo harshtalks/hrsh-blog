@@ -1,0 +1,107 @@
+---
+import GithubLogo from "phosphor-astro/GithubLogo.astro";
+const projects = [
+    {
+        time: "ongoing",
+        title:"Workspace-Vault",
+        description: [
+            `Developed a secure cross-platform environment variable sharing platform (workspace-vault) using Next.js and TypeScript
+for frontend, incorporating a Backend for Frontend (BFF) Pattern with Tailwind CSS and Shadcn (vercel design
+language) React components.`,
+`Implemented robust end-to-end encryption utilizing user-provided secret keys, generating a master key through the
+PBKDF2 algorithm, and employing AES encryption for variable storage in the database.`,
+`Enhanced security measures by integrating WebAuthn for multi-factor authentication, ensuring a secure user
+authentication process, and implemented access tracking using Redis for logging user interactions with the application."`
+        ],
+        gh: "https://github.com/harshtalks/workspace-vault",
+        skills: [
+            "Next.js",
+            "RSC", 
+            "Typescript",
+            "Cryptography", 
+            "Node.js",
+            "Prisma", 
+            "Postgres", 
+            "Redis",
+            "REST API"
+        ]
+    },
+    {
+        time: "2023",
+        title: "Scraptical",
+        description: [
+            `Led the development of a Next.js application with FastAPI and microservices architecture to scrape and analyze large
+volumes of Amazon product reviews using NLP and Sentimental Analysis.`,
+`Applied Python to categorize each review as positive, negative, or neutral, and assigned weights based on impact,
+providing nuanced insights into customer sentiment.`,
+`Utilized API-driven architecture to enable businesses to easily integrate the tool into their existing infrastructure and
+obtain valuable insights quickly.`
+        ],
+        skills: [
+            "Next.js", 
+            "Typescript", 
+            "Python", 
+            "FASTAPI",
+            "NLP",
+            "Web Scraping"
+        ],
+        gh: "https://github.com/TARP-bbs/scraptical-main"
+    },
+    {
+        title: "Proximi",
+        time:"2023",
+        skills: [
+            "Go",
+            "Postgres",
+            "Geohashing",
+            "REST API Design",
+            "OpenAPI specs 2.0",
+            "Auth",
+            "ORM"
+        ],
+        description: [
+            `Developed GoLang-based API Service facilitating a location-based service discovery platform, employing geohashing
+techniques on a dumped yelp database to efficiently locate nearby businesses for users in real time.`,
+`Orchestrated a robust authentication layer utilizing custom JWT (JSON Web Tokens) for secure user access, while
+implementing a sophisticated rate limiter to maintain optimal API performance and prevent abuse.`,
+`Implemented comprehensive API documentation through OpenAPI specifications, enhancing project maintainability, and
+integrated Bing API seamlessly to compute precise distances from users’ locations to nearby businesses, enriching user experience.`
+        ],
+        gh: "https://github.com/harshtalks/proximi"
+    }
+]
+---
+
+<div>
+      <!-- Heading  -->
+    <h4 class="text-base">Personal Projects</h4>
+
+    <div class="space-y-12">
+        {
+            projects.map(project => <div class="md:grid space-y-2 md:space-y-0 md:grid-cols-4  md:gap-12">
+            <!-- Duration  -->
+            <div class="text-zinc-500 col-span-1">
+                <p>{project.time}</p>
+            </div>
+
+            <!-- Actual Details  -->
+            <div class="space-y-2 col-span-3">
+                
+                <div class="flex items-center gap-2">
+                    <h4 class="!m-0 text-base text-zinc-700">{project.title}</h4>
+                    <a href=`${project.gh}` target="_blank"><GithubLogo class="h-6 text-zinc-500 w-6 inline hover:text-zinc-900"/></a>
+                </div>
+                <div class="text-zinc-700 text-sm">
+                    {project.description.map(el => <p class="!m-0">{el}</p>)}
+                </div>
+                <!-- Skills  -->
+                <div class="text-zinc-500 text-sm flex justify-start items-center gap-3 flex-wrap">
+                    {project.skills.map((el) => 
+                        <p class="!m-0">{el}</p>
+                    )}
+                </div>
+            </div>
+        </div>)
+        }
+    </div>
+</div>

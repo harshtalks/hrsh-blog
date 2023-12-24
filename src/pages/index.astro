@@ -19,6 +19,8 @@ import FormattedDate from "@/components/FormattedDate.astro";
 import ArrowRightLight from 'phosphor-astro/ArrowRightLight.astro'
 import Hash from 'phosphor-astro/HashDuotone.astro'
 import Social from "@/components/Social.astro";
+import WorkExperience from "@/components/WorkExperience.astro";
+import Projects from "@/components/Projects.astro";
 
 ---
 
@@ -26,7 +28,6 @@ import Social from "@/components/Social.astro";
     title="Harsh Pareek"
     description="Astro Lane is a customizable blog theme that offers minimal styling, making it easy for you to tailor it to your needs. It's a personal portfolio landing template for developers and designers."
 >
-<Social slot="social-icons"/>
     <div
         class="main-wrapper wrap-sm grid gap-16 px-8 md:gap-24 lg:gap-32 mx-auto"
     >
@@ -48,12 +49,14 @@ import Social from "@/components/Social.astro";
                     </h1>
                 </div>
                 <div
-                    class="content text-3xl md:text-3xl font-medium leading-8 lg:leading-10 tracking-tight lg:tracking-tighter text-neutral-500"
+                    class="content text-xl md:text-3xl font-medium lg:leading-10 lg:tracking-tighter text-neutral-500"
                 >
-                   I love Capybaras and Frontend Engineering (In that order). Based in Chennai (India)
+                   I love Frontend Engineering and Capybaras (In that order). Based in Chennai (India)
                 </div>
             </div>
         </SectionContainer>
+        <WorkExperience/>
+        <Projects/>
         <SectionContainer class="blogs--container">
             <div class="flex flex-row my-4 items-center text-neutral-500">
                 <h2 class="font-medium text-h4 mb-0 leading-8 tracking-tighter">
@@ -71,7 +74,7 @@ import Social from "@/components/Social.astro";
                         <li class="flex flex-col gap-1">
                             <a
                                 href={`/blog/${post.slug}`}
-                                class="block w-full card-clip p-8 no-underline sm:flex-row sm:gap-8 bg-neutral-50 rounded-[40px] transition-all duration-300 hover:-top-0.5 relative"
+                                class="block w-full card-clip p-8 no-underline sm:flex-row sm:gap-8 bg-neutral-50 rounded-[40px] transition-transform duration-300 ease-in-out hover:-top-1 relative"
                             >
                                 <span class="grid flex-1 gap-1">
                                     <span class="text-neutral-900 line-clamp-1 md:inline-flex items-center">
