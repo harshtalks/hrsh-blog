@@ -9,9 +9,18 @@ draft: false
 featured: true
 ---
 
+<Image
+    src="https://i.redd.it/v2rjgn4vxz8a1.jpg"
+    title={"MEME"}
+    alt={"MEME"}
+    width={300}
+    height={300}
+    className="mx-auto"
+/>
+
 Building modern web applications is no less complicated than writing a thesis. There was a time when we could just spin up an ec2 instance and put our static html, css and little bit of Javascript (Yes, using javascript instead of TS was not really a crime back then) but we are past that era. For a single page website with zero to little client interactivity, we tend to rely on meta frameworks like Next.js. Next.js is a great framework but it can be a terrible choice if you are using it for a marketing landing page or even your personal blog.
 
-Meta frameworks like Next.js need to download a whole lot of javascript to make your website interactive which is terrible for <a className="text-zinc-900" href="https://web.dev/articles/tti"  target="_blank">Time to Interatcive</a> (TTI) web vital.
+Meta frameworks like Next.js need to download a whole lot of javascript to make your website interactive which is terrible for <a className="text-zinc-900 font-bold" href="https://web.dev/articles/tti"  target="_blank">Time to Interactive</a> (TTI) web vital.
 
 Those scripts weren't enough, now you also have third party scripts, maybe from the
 google analytics, or hubspot, or your designers want to see whether their over engineered
@@ -21,4 +30,57 @@ thread.
 
 import Blockquote from "../../components/general/Blockquote.astro";
 
-<Blockquote />
+<Blockquote
+    title="We promise to keep javascript single threaded"
+    subtitle="checkout this amazing thread on reddit"
+    link="https://www.reddit.com/r/ProgrammerHumor/comments/zyvdub/we_promise_to_keep_javascript_single_threaded/"
+/>
+
+#### But here's a catch:
+
+JS is single threaded but the underlying engine that transpiles the javascript language supports multi threading. and thats when the service workers (or web workers) come into the picture.
+
+export const Bold = () => (
+    <p className="font-semibold">
+        Web Workers are a simple means for web content to run scripts in
+        background threads. The worker thread can perform tasks without
+        interfering with the user interface.
+    </p>
+);
+
+<Bold />
+
+Let's Understand how these web workers can help us get what we want, the performance:
+
+-   A way to put all the third party scripts into a separate thread, not the main thread.
+-   A consensus to make sure not third party script gets executed in our main thread, cause that's for our main application.
+
+###### This is where <a href="https://partytown.builder.io/" target="_blank" className="inline"> Builder.io's partytown </a> come into the picture. (Currently in BETA)
+
+import { Image } from "astro:assets";
+
+<Image
+    src="https://user-images.githubusercontent.com/452425/152363590-89d3b9a5-35c7-4c12-8f3e-c8b5ce4bb267.png"
+    title={"party time builder io"}
+    alt={"party time"}
+    width={400}
+    height={300}
+    className="w-full h-full"
+/>
+
+##### So what does partytime do and how does it do?
+
+-   Partytown creates a messaging protocol between the service workers and main thread running in browser for workers to have synchronous/async access to all the browser specific things such as DOM APIs, localstorage etc.
+-   It does so by leveraging proxies, sync XHR Requests,
+-   you don’t need to rewrite or refactor your third-party scripts to make them work within web workers. They’re executed exactly as coded; they just work from the background thread.
+
+By putting all these third party scripts into service workers thread, we are saving so much for our main thread and this is directly resulting in best ever web vitals score.
+
+### Further Read (Or watch IDK)
+
+-   <a href="https://partytown.builder.io/" target="_blank">
+        https://partytown.builder.io/
+    </a>
+-   <a href="https://youtu.be/DjUWMZAzOMA?si=jEfU585hc1vLmvI-" target="_blank">
+        https://youtu.be/DjUWMZAzOMA?si=jEfU585hc1vLmvI-
+    </a>

@@ -6,6 +6,7 @@ import SectionContainer from "@/components/SectionContainer.astro";
 import getSortedTags from "@/utils/getSortedTags";
 import ArrowLeftLight from "phosphor-astro/ArrowLeftLight.astro";
 import HashDuotone from "phosphor-astro/HashDuotone.astro";
+import {Image} from "astro:assets"
 
 const posts = await getCollection("blog");
 
@@ -47,6 +48,7 @@ let tags = getSortedTags(posts);
                     ))
                 }
             </ul>
+            
         </SectionContainer>
     </div>
 </Layout>
