@@ -1,14 +1,24 @@
 ---
-const skills = [
-    "Typescript", "Javascript", "Go", "React","Next.js","Astro", "REST API Design Patterns","Design Systems","React Performance", "Docker", "System Design", "CSS", "HTMX", 
-]
+const skills = {
+    "Languages": ["Typescript", "Javascript", "Go", "HTML", "CSS","C"],
+    "Frameworks": ["React", "Next.js", "Astro", "Go Fiber","HTMX"],
+    "Server Side": ["REST API Design", "GRPC", "Ant.", "Gorm"],
+    "Client Side": ["Redux", "React Performance", "Tailwind", "Prisma", "Drizzle", ],
+    "Tools": ["Version Control Git", "Docker"]
+}
 ---
 
 <div>
-    <div class="flex items-center justify-center">
-        <h2 class="text-lg text-zinc-700">I can help you with</h2>
+    <div class="">
+        <h2 class="text-base !m-0 pb-4">I can help you with</h2>
     </div>
-    <div class="flex w-full gap-2 md:w-3/5 mx-auto items-center justify-center flex-wrap gap-x-8 gap-y-4">
-        {skills.map(l => <p class="!m-0 text-zinc-400 whitespace-nowrap select:none hover:bg-black hover:text-white">{l}</p>)}
+    <div class="space-y-2">
+        {Object.entries(skills).map(([k,v]) => 
+        <div class="md:grid md:grid-cols-5 flex flex-col">
+            <p class="col-span-1 !m-0">{k}:</p>
+            <p class="!m-0 col-span-4 text-zinc-500">
+                {v.join(", ")}
+                </p>
+        </div>)}
     </div>
 </div>
