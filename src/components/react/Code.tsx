@@ -1,32 +1,26 @@
 import * as React from "react";
-import {
-    Sandpack,
-    SandpackCodeEditor,
-    SandpackConsole,
-    SandpackFileExplorer,
-    SandpackLayout,
-    SandpackPreview,
-    SandpackProvider
-} from "@codesandbox/sandpack-react";
+import { Sandpack } from "@codesandbox/sandpack-react";
 import { sandpackDark } from "@codesandbox/sandpack-themes";
 
-export const CodeComponent = () => {
+export const CodeComponent = ({
+    files,
+    openFile
+}: {
+    files: any;
+    openFile: string;
+}) => {
     return (
-        <SandpackProvider>
-            <Sandpack
-                theme={sandpackDark}
-                template="vanilla-ts"
-                options={{
-                    showConsoleButton: true,
-                    showInlineErrors: true,
-                    showNavigator: true,
-                    showLineNumbers: true,
-                    showTabs: true,
-                    editorHeight: "400px",
-                    activeFile: "/index.html",
-                    visibleFiles: ["/index.html", "/index.ts"]
-                }}
-            />
-        </SandpackProvider>
+        <Sandpack
+            theme={sandpackDark}
+            template="react-ts"
+            options={{
+                showInlineErrors: true,
+                showNavigator: true,
+                showLineNumbers: true,
+                editorHeight: "400px",
+                activeFile: openFile
+            }}
+            files={files}
+        />
     );
 };

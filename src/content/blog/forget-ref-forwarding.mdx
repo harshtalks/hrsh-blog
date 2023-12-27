@@ -1,0 +1,327 @@
+---
+title: Forget about ref forwarding in React
+pubDate: 2023-12-27
+description: In earlier React versions, they introduced a new feature called ref forwarding. It allows you to pass a ref from a parent component to a child component. This article explains why you should not use it.
+tags:
+    - react
+    - javascript
+    - typescript
+featured: true
+---
+
+import { Image } from "astro:assets";
+
+<Image
+    src="https://i.redd.it/9odfz0kwy2i21.jpg"
+    title={"party time builder io"}
+    alt={"party time"}
+    width={400}
+    height={300}
+    className="w-full h-full"
+/>
+
+{/* Actual Content */}
+
+We love react, and why not? It's a great library for building user interfaces. It's easy to learn, and it's easy to get started. I mean i do love the idea of reusability and component driven development, as good it may sound, it does the jon pretty well. <strong>But</strong> I can't deny that I've got myself enough headaches with the weird inner workings of useState and useEffect. But that's not what we are here to talk about, we are here to talk about ref forwarding.
+
+## What is ref forwarding?
+
+For those who don't know (so jealous of you urgh..) First we need to understand the useRef hook. useRef is a hook that allows you to create a mutable object that persists for the lifetime of the component. It's like a global variable that you can use to store data that you want to persist between renders. It's a great tool for storing data that you don't want to be part of the state. But it's not the only thing that useRef can do, it can also be used to store a reference to a DOM element. This is where ref forwarding comes in. Ref forwarding allows you to pass a ref from a parent component to a child component. This is useful when you want to access a DOM element in a child component from a parent component. Let's look at an example.
+
+```tsx
+export const VeryBasicInputComponent = () => {
+    const inputRef = useRef<ElementRef<"input">>(null);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    return <input type="text" ref={inputRef} />;
+};
+```
+
+Above you see is a small React (with TS) component that renders an input element and focuses it when the component is mounted. This is a very basic example, but it shows how you can use ref forwarding to access a DOM element in a child component from a parent component. <strong>useRef</strong> can be pretty useful in accessing DOM elements especially the fact that it's a mutable object that persists for the lifetime of the component. That means it does not cause any rerenders, yes, <strong>No side effects at all</strong> (No pun intended, useEffect)
+
+## Back to ref forwarding
+
+When you create your custom components, you sometimes need to decouple your components into smaller components. And in such situations you may want the parent component to access the DOM element of the child component. But you can't send your ref to the child component from parent component to child component through props. This is where ref forwarding comes in. Ref forwarding allows you to pass a ref from a parent component to a child component. This is useful when you want to access a DOM element in a child component from a parent component. Let's look at an example.
+
+```tsx
+// Parent Component
+export const ParentComponent = () => {
+    const inputRef = useRef<ElementRef<"input">>(null);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    return <ChildComponent ref={inputRef} />;
+};
+```
+
+```tsx
+// Child Component
+export const ChildComponent = forwardRef((props, ref) => {
+    return <input type="text" ref={ref} />;
+});
+```
+
+As you can see here, we didn't do any maginc here but just used a proprty from react called forwardRef, and as it suggests, it just exists to make your life easy to pass props from parent to child.
+
+## Why you should not use it?
+
+Firstly, I love the idea, but see, as a junior developer, I thought that React.js would not have such caviats around passing props, I mean we've been passing states through props all the f## time right?
+Why such big deal about this piece of code? Well, it's not a big deal, but it kinda shackles you to use it in a certain way, and that's not what React is about. React is about freedom, and ref forwarding is not something I would want to use.
+
+## What's the alternative?
+
+Okay so its gonna sound vary stupid and once u hear it you will have one of those gotcha moments, but the alternative is to just name the prop anything else other than <strong>ref</strong>, call it inputRef or vueRef, or useEffectAsyncExternalStoreRef just anything. And it will work just fine.
+
+## Show me then I'll believe you
+
+Okay, so here's the code, which follows the forwardRef pattern, and it works just fine.
+
+import { CodeComponent } from "../../components/react/Code";
+
+<CodeComponent openFile="App.tsx" client:load files={{"public/index.html": `<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="theme-color" content="#000000">
+	
+	<link rel="manifest" href="%PUBLIC_URL%/manifest.json">
+	<link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
+	
+    <title>React App</title>
+
+</head>
+
+<body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+</body>
+
+</html>`,
+"App.tsx": `import { ElementRef, forwardRef, useEffect, useRef } from "react";
+import "./styles.css";
+
+export default function App() {
+    return (
+        <div className="App">
+            <h1>Hello CodeSandbox (My readers)</h1>
+            <h2>Example with forwardRef!</h2>
+            <ParentComponentOfBasicChild />
+        </div>
+    );
+}
+
+const ParentComponentOfBasicChild = () => {
+const ref = useRef<HTMLInputElement>(null);
+
+useEffect(() => {
+ref.current?.focus();
+}, []);
+
+return (
+
+<div>
+    <h2>Parent Component</h2>
+    <ChildComponentOfBigParent ref={ref} />
+</div>
+); };
+
+const ChildComponentOfBigParent = forwardRef<HTMLInputElement>(({}, ref) => {
+return (
+
+<input
+    ref={ref}
+    placeholder="Hi im child"
+    style={{
+        fontSize: "2rem"
+    }}
+/>
+); }); `, "index.tsx":`import React from "react"; import ReactDOM from "react-dom/client";
+import App from "./App";
+
+const rootElement = document.getElementById("root")!;
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
+
+<React.StrictMode>
+    <App />
+</React.StrictMode>
+
+);`,
+"styles.css":`.App {
+font-family: sans-serif;
+text-align: center;
+}
+`,
+"package.json":`{
+"name": "react-typescript",
+"version": "1.0.0",
+"description": "React and TypeScript example starter project",
+"keywords": ["typescript", "react", "starter"],
+"main": "index.tsx",
+"dependencies": {
+"loader-utils": "3.2.1",
+"react": "18.2.0",
+"react-dom": "18.2.0",
+"react-scripts": "5.0.1"
+},
+"devDependencies": {
+"@types/react": "18.2.37",
+"@types/react-dom": "18.2.15",
+"@typescript-eslint/eslint-plugin": "^6.9.1",
+"@typescript-eslint/parser": "^6.9.1",
+"eslint": "^8.52.0",
+"eslint-plugin-react": "^7.33.2",
+"eslint-plugin-react-hooks": "^4.6.0",
+"eslint-plugin-react-refresh": "^0.4.4",
+"typescript": "4.4.2"
+},
+"scripts": {
+"start": "react-scripts start",
+"build": "react-scripts build",
+"test": "react-scripts test --env=jsdom",
+"eject": "react-scripts eject"
+},
+"browserslist": [">0.2%", "not dead", "not ie <= 11", "not op_mini all"]
+}
+`,
+"tscconfig.json":`{
+"include": [
+"./src/**/*"
+],
+"compilerOptions": {
+"strict": true,
+"esModuleInterop": true,
+"lib": [
+"dom",
+"es2015"
+],
+"jsx": "react-jsx"
+}
+}`
+}} />
+
+Now here's the code that does not follow the forwardRef pattern, and it works just fine.
+
+<CodeComponent openFile="App.tsx" client:load files={{
+
+"App.tsx": `import { ElementRef, forwardRef, useEffect, useRef } from "react";
+import "./styles.css";
+
+export default function App() {
+    return (
+        <div className="App">
+            <h1>Hello CodeSandbox (My readers)</h1>
+            <h2>Example with forwardRef!</h2>
+            <ParentComponentOfBasicChild />
+        </div>
+    );
+}
+
+const ParentComponentOfBasicChild = () => {
+const ref = useRef<HTMLInputElement>(null);
+
+useEffect(() => {
+ref.current?.focus();
+}, []);
+
+return (
+
+<div>
+    <h2>Parent Component</h2>
+    <ChildComponentOfBigParent justSameRefWithDiffPropName={ref} />
+</div>
+); };
+
+const ChildComponentOfBigParent = ({
+justSameRefWithDiffPropName,
+}: {
+justSameRefWithDiffPropName: React.RefObject<HTMLInputElement>;
+}) => {
+return (
+
+<input
+    ref={justSameRefWithDiffPropName}
+    placeholder="Hi im child"
+    style={{
+        fontSize: "2rem"
+    }}
+/>
+); }; `,
+
+"index.tsx":`import React from "react"; import ReactDOM from "react-dom/client";
+import App from "./App";
+
+const rootElement = document.getElementById("root")!;
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
+
+<React.StrictMode>
+    <App />
+</React.StrictMode>
+
+);`,
+"styles.css":`.App {
+font-family: sans-serif;
+text-align: center;
+}
+`,
+"package.json":`{
+"name": "react-typescript",
+"version": "1.0.0",
+"description": "React and TypeScript example starter project",
+"keywords": ["typescript", "react", "starter"],
+"main": "index.tsx",
+"dependencies": {
+"loader-utils": "3.2.1",
+"react": "18.2.0",
+"react-dom": "18.2.0",
+"react-scripts": "5.0.1"
+},
+"devDependencies": {
+"@types/react": "18.2.37",
+"@types/react-dom": "18.2.15",
+"@typescript-eslint/eslint-plugin": "^6.9.1",
+"@typescript-eslint/parser": "^6.9.1",
+"eslint": "^8.52.0",
+"eslint-plugin-react": "^7.33.2",
+"eslint-plugin-react-hooks": "^4.6.0",
+"eslint-plugin-react-refresh": "^0.4.4",
+"typescript": "4.4.2"
+},
+"scripts": {
+"start": "react-scripts start",
+"build": "react-scripts build",
+"test": "react-scripts test --env=jsdom",
+"eject": "react-scripts eject"
+},
+"browserslist": [">0.2%", "not dead", "not ie <= 11", "not op_mini all"]
+}
+`,
+"tscconfig.json":`{
+"include": [
+"./src/**/*"
+],
+"compilerOptions": {
+"strict": true,
+"esModuleInterop": true,
+"lib": [
+"dom",
+"es2015"
+],
+"jsx": "react-jsx"
+}
+}`
+}} />
+
+Do you believe me now? I hope you do, and I hope you don't use ref forwarding anymore. It's not a bad thing, but it's not a good practice either. It's just a thing that you can do, but you don't have to do. I hope you enjoyed this article, and I hope you learned something new. If you have any questions or comments, please text me on any of my socials or you could just mail me you know. I will try to answer them as soon as possible. Thank you for reading this article, and I hope to see you in the next one. Bye!
+
+## Happy Holidays and Happy New Year 🎆
