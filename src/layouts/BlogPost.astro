@@ -23,6 +23,9 @@ const ogUrl = new URL(
 ).href;
 
 const { Content } = await post.render();
+
+
+const timeToRead =  readingTime(post.body).text;
 ---
 
 <Layout
@@ -80,7 +83,7 @@ const { Content } = await post.render();
                     
                         <div class="flex items-center gap-2 p-0 m-0">
                             <ReadingTime class="h-6 w-6 inline opacity-60"/>
-                            <h6>{readingTime(Content.toString()).text}</h6>
+                            <h6>{timeToRead}</h6>
                         </div>
                     <div
                         class="prose-code:whitespace-pre-wrap prose-code:break-words prose-code:overflow-x-auto"
@@ -91,13 +94,13 @@ const { Content } = await post.render();
                     <ul  class="list-none p-0 m-0">
                 {
                     tags.map((tag) => (
-                        <li class={`inline-block my-3 underline-offset-8`}>
+                        <li class={`inline-block underline-offset-8`}>
                             <a
                                 href={`/tags/${tag.toLowerCase()}`}
-                                class={`text-lg pr-2 flex flex-wrap items-center relative underline hover:-top-0.5 hover:text-skin-accent focus-visible:p-1`}
+                                class={`text-lg pr-2 flex !m-0 flex-wrap items-center relative underline hover:-top-0.5 hover:text-skin-accent focus-visible:p-1`}
                             >
                                 <HashDuotone class="w-6 h-6" />
-                                &nbsp;<span>{tag.toLowerCase()}</span>
+                                &nbsp;<span class="!m-0">{tag.toLowerCase()}</span>
                             </a>
                         </li>
                     ))

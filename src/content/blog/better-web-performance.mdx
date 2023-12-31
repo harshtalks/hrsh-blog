@@ -6,7 +6,8 @@ tags:
     - performance
     - service workers
 draft: false
-featured: true
+featured: false
+published: true
 ---
 
 <Image
@@ -40,15 +41,11 @@ import Blockquote from "../../components/general/Blockquote.astro";
 
 JS is single threaded but the underlying engine that transpiles the javascript language supports multi threading. and thats when the service workers (or web workers) come into the picture.
 
-export const Bold = () => (
-    <p className="font-semibold">
+    <strong>
         Web Workers are a simple means for web content to run scripts in
         background threads. The worker thread can perform tasks without
         interfering with the user interface.
-    </p>
-);
-
-<Bold />
+    </strong>
 
 Let's Understand how these web workers can help us get what we want, the performance:
 

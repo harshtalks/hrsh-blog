@@ -1,0 +1,241 @@
+---
+title: Why I'm scared of useEffect
+pubDate: 2023-12-29
+description: useEffect is a great hook and I used it a lot for almost all the problems I had to solve. But it's not perfect and it can be a source of bugs.
+tags:
+    - react
+    - javascript
+    - hooks
+published: true
+featured: true
+---
+
+#### Hello everyone 👋
+
+Happy holidays to my fellow React engineers, to the others, happy holidays too, IG! I'm jealous that you didn't waste most of this year debugging weird useEffect issues.
+
+Most of you know that useEffect is kinda cool, fun one to work with tbh. I've seen people using it to fetch data, to subscribe to an external store, or even to trigger an action which can be just done with a simple function call. I'm not here to judge, I'm here to share my experience with useEffect and why I'm scared of it.
+
+#### The Mental Modal
+
+<blockquote>
+
+There are two types of people:
+
+-   Those who are new to react (from the functional component era)
+-   Those who are old to react (from the class based component era)
+
+</blockquote>
+
+The ones who are old to React, tend to use useEffect as 1:1 to the old class based component rendring patterns. Previously, when React was in its <strong>OO</strong> era (Object Oriented Programming, or whatever other slurs you use to describe it), React had a lifecycle which was pretty much the same as the lifecycle of a class based component. You had `componentDidMount`, `componentDidUpdate`, `componentWillUnmount` and `componentWillReceiveProps`. These were the main lifecycle methods that you had to use to make your component work. And they were pretty much the same as the lifecycle of a React component.
+Now let me explain the whole lifecyle of the react component:
+
+1. The component is created and mounted to the DOM (componentDidMount)
+2. The component is updated (componentDidUpdate)
+3. The component is unmounted from the DOM (componentWillUnmount)
+
+In that lifecyle, for any change, the component will be updated. And that's the same for the state change. So, if you want to do something when the component is updated, you can just use `componentDidUpdate` and do your thing there. And that's what most of the people do with useEffect.
+useEffect is not a 1:1 replacement for `componentDidUpdate`. useEffect is a hook that is called after the component is rendered. And that's the main difference between `componentDidUpdate` and useEffect. useEffect is called after the component is rendered, and `componentDidUpdate` is called after the component is updated. And that's a huge difference.
+
+Now, the ones who are new to React, tend to use useEffect as a replacement for `componentDidMount`. And that's not a bad thing. useEffect is a great hook and I used it a lot for almost all the problems I had to solve. But it's not perfect and it can be a source of bugs. They will put all their logic inside useEffect and they will be happy with it. For example, the network requests, the state updates, the subscriptions, etc. And it seems to work fine. But it's not. And I'll explain why.
+
+#### The problems
+
+##### The infinite loop
+
+why the hell is my component re-rendering infinitely? I don't know, maybe because you're using useEffect wrong. useEffect is called after the component is rendered. So, if you're updating the state inside useEffect, you're basically telling React to re-render the component. And that's what React does. It re-renders the component and calls useEffect again. You can opt out of this infinite loop by passing an empty array as the second argument to useEffect. But isnt that something that you should be doing in the first place? I wonder why the default behaviour for this hook is to re-render the component infinitely. I mean, and its prone to errors too. You can easily forget to pass the second argument and you'll end up with an infinite loop.
+
+##### The side effects
+
+Newly released react version has a strict mode in which useEffect is triggered twice on component rendering, and it's not a bug, it's a feature.
+
+-   Your components will re-render an extra time to find bugs caused by impure rendering.
+-   Your components will re-run Effects an extra time to find bugs caused by missing Effect cleanup.
+-   Your components will be checked for usage of deprecated APIs.
+
+This brings us to two different mental model to useEffect:
+
+<table>
+    <thead>
+        <tr>
+            <th>Imperative</th>
+            <th>Declarative</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                Imperative mental model means that if something happens, effect
+                is executed.
+            </td>
+            <td>
+                Declarative One means that if something changes, the state of
+                the app will change, and depending on the state of the app, the
+                effect will be executed.
+            </td>
+        </tr>
+        <tr>
+            <td>-</td>
+            <td>
+                <strong>Dependency array</strong> of the useEffect comes under
+                the declarative mental model. This means that useEffect will be
+                executed only if the condition (state change) is met. but React
+                may execute it again due to the strict mode. and you should not
+                disable the strict mode as it's a great tool to find bugs.
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+So in declarative mental model:
+
+```tsx
+useEffect(() => {
+    // do something
+}, [state]);
+```
+
+And in imperative mental model:
+
+```tsx
+useEffect(() => {
+    if (foo) {
+        // do something
+    } else if (bar || fiz || (buzz && fizz)) {
+        // do something else
+    } else if (fizz && buzz) {
+        // do something else
+    } else if (buzz) {
+        // do something else
+    }
+}, [foo, bar, fizz, buzz]);
+```
+
+Here, we have nasty side effects. We have to check for all the conditions and then execute the effect and we forgot to do cleanup here.
+
+We want effect to happen things happen, not when things change.
+
+##### useEffect is for Synchronization
+
+useEffect is for synchronization. It's not for doing side effects. It's for synchronizing the state of the app with the state of the DOM. It's for synchronizing the state of the app with the state of the external store. It's for synchronizing the state of the app with the state of the external API. It's for synchronizing the state of the app with the state of the external library. It's for synchronizing the state of the app with the state of the external service. In fact it should have been called <strong>useSynchronize</strong> instead.
+
+Example:
+
+```tsx
+useEffect(() => {
+    // synchronize with the external store
+    const unsubscribe = store.subscribe(() => {
+        setState(store.getState());
+    });
+
+    return () => {
+        unsubscribe();
+    };
+}, []);
+```
+
+You don't need useEffect for filtering or transforming data. For example, this code filters the array based the user input:
+
+```tsx
+export const App = () => {
+    const [input, setInput] = useState("");
+    const [data, setData] = useState([]);
+
+    useEffect(() => {
+        const filteredData = data.filter((item) => item.includes(input));
+        setData(filteredData);
+    }, [input]);
+
+    return (
+        <div>
+            <input value={input} onChange={(e) => setInput(e.target.value)} />
+            <ul>
+                {data.map((item) => (
+                    <li>{item}</li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+```
+
+instead you can do somethig like that:
+
+```tsx
+export const App = () => {
+    const [input, setInput] = useState("");
+
+    const filteredData = data.filter((item) => item.includes(input));
+
+    return (
+        <div>
+            <input value={input} onChange={(e) => setInput(e.target.value)} />
+            <ul>
+                {filteredData.map((item) => (
+                    <li>{item}</li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+```
+
+Similarly, you don't need useEffect for action events. For example, the toggle of dialog:
+
+```tsx
+export const App = () => {
+    const ref = useRef<ElementRef<"dialog">>(null);
+
+    const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            ref.current.showModal();
+        } else {
+            ref.current.close();
+        }
+    }, [open]);
+
+    return (
+        <div>
+            <button onClick={() => setOpen(!open)}>toggle button</button>
+            <dialog ref={ref}></dialog>
+        </div>
+    );
+};
+```
+
+You can do this:
+
+```tsx
+export const App = () => {
+    const ref = useRef<ElementRef<"dialog">>(null);
+
+    const [open, setOpen] = useState(false);
+
+    const toggleDialog = () => {
+        const currentState = !open;
+        setOpen(currentState);
+        if (currentState) {
+            ref.current.showModal();
+        } else {
+            ref.current.close();
+        }
+    };
+
+    return (
+        <div>
+            <button onClick={toggleDialog}>toggle button</button>
+            <dialog ref={ref}></dialog>
+        </div>
+    );
+};
+```
+
+For fetching data, network calls etc on component mount, you can use react-query or swr. They are great libraries and they are built for that purpose. They are not essentially fetching libraries, they are caching libraries.
+
+#### Conclusion
+
+Yes concluding with the point that you may do everything you want to do and wont even need useEffect, so go against your instinct and dont use useEffect until and unless you got no choice.
+
+## Happy New Year 🎉🎉🎉
