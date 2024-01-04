@@ -1,0 +1,120 @@
+---
+title: This has to be my favorite Typescript feature 🤯🤯🤯
+pubDate: 2024-01-04
+description: This Typescript feature or trick is my favorite. I've using this recursive pattern for a while to be more efficient at Type Driven Development.
+featured: true
+published: true
+tags:
+    - Typescript
+    - Javascript
+    - Web Development
+---
+
+#### Happy New Year! 🎉🎉🎉
+
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+```
+
+I love Typescript so much, no matter how much svelte creators hate it. I've been using it for a while now and it's a very important tool to have in your hand while building modern web applications. Because of TS, I dont have to wait for the browser to tell me that I've made a mistake, instead TS will yell at me immediately that I'm a terrible developer at remembering basic Javascript object properties. But you are not here for a typescript tutorial here, this is not a TS 101 blog post. I'm here to show you my favorite TS feature that I've been using for a while now.
+
+#### Recursion
+
+Recursion is a very important concept in programming. It's a technique where a function calls itself. It's a very powerful technique that can be used to solve many problems. I'm not going to go into details about recursion, but if you want to learn more about it, I recommend you to check out [this](https://www.freecodecamp.org/news/recursion-is-not-hard-858a48830d83/) article.
+
+I didnt know that TS type inferring goes beyond just static type analysis but it can pretty much extend to the programming paradigms such as recursions. And with the help of this and other typescript features such as string literal types and type generics, we can create some pretty cool stuff.
+
+#### Here's how
+
+Suppose you are a senior engineer in a company that builds a lot of cool tech, and you are paged on multiple JIRA issues but this is your favorite time of the year, Its the new intern joining time, and ofcourse you want to flex your TS skills on them to gain the respect and the status of wizard in the company, and you are asked to reverse a string but on the type level. You can do this by using recursion.
+
+```typescript
+type DemoString = "Hello-World";
+
+type ReverseString<
+    S extends string,
+    Result extends string = ""
+> = S extends `${infer FirstChar}${infer Rest}`
+    ? ReverseString<Rest, `${FirstChar}${Result}`>
+    : Result;
+
+type Reversed = ReverseString<DemoString>;
+//  ^? "dlroW-olleH"
+```
+
+Okay so what has happened here? Let's break it down.
+
+1. We have created a type called `DemoString` which is a string literal type.
+2. We have created a type called `ReverseString` which takes two arguments, `S` which is a string literal type and `Result` which is also a string literal type but with a default value of an empty string.
+3. We have created a conditional type which checks if the `S` type extends a string literal type with two infered types, `FirstChar` and `Rest`.
+4. If the condition is true, we recursively call the `ReverseString` type with the `Rest` type and the `FirstChar` type is prepended to the `Result` type.
+5. If the condition is false, we return the `Result` type.
+
+Another method to do this is by using the following trick:
+
+```typescript
+type DemoString = "Hello-World";
+
+type ReverseString<S extends string> =
+    S extends `${infer FirstChar}${infer Rest}`
+        ? `${ReverseString<Rest>}${FirstChar}`
+        : S;
+
+type Reversed = ReverseString<DemoString>;
+
+//  ^? "dlroW-olleH"
+```
+
+Here:
+
+1. We have created a type called `DemoString` which is a string literal type.
+2. We have created a type called `ReverseString` which takes one argument, `S` which is a string literal type.
+3. We have created a conditional type which checks if the `S` type extends a string literal type with two infered types, `FirstChar` and `Rest`.
+4. If the condition is true, we recursively call the `ReverseString` type with the `Rest` type and the `FirstChar` type is appended to the result of the `ReverseString` type.
+
+Did you like the idea? Okay wait so now let's try to do something cooler with this, finding the length of the string, only using the typescript okay.
+
+Now here's how we will do it.
+
+1. First We will create Array out of the string which will have items equal to the length of the string.
+2. Then we will get the length of the array.
+
+So let's do it:
+
+```typescript
+type DemoString = "Hello-World";
+
+/**
+ *  Create an array out of the string
+ */
+type ArrayOf<
+    S extends string,
+    Result extends Array<any> = []
+> = S extends `${infer FirstChar}${infer Rest}`
+    ? toArray<Rest, [...Result, any]>
+    : Result;
+
+/**
+ * Get the length of the array
+ */
+
+type LengthOf<A extends Array<any>> = A extends { length: infer L } ? L : never;
+
+type LengthOfString<S extends string> = LengthOf<ArrayOf<S>>;
+//  ^? 11
+```
+
+As we can see, here we have:
+
+1. Created a type called `ArrayOf` which takes two arguments, `S` which is a string literal type and `Result` which is an array literal type with a default value of an empty array.
+2. We have created a conditional type which checks if the `S` type extends a string literal type with two infered types, `FirstChar` and `Rest`.
+3. If the condition is true, we recursively call the `ArrayOf` type with the `Rest` type and the `FirstChar` type is prepended to the `Result` type.
+4. If the condition is false, we return the `Result` type.
+5. We have created a type called `LengthOf` which takes an array literal type and returns the length of the array.
+6. We have created a type called `LengthOfString` which takes a string literal type and returns the length of the string.
+
+#### Conclusion
+
+I hope you loved the idea of using recursion in typescript. I've been using this pattern for a while now and it has helped me a lot in my type driven development, (my definition of TDD)
+
+#### Thank you 👍
