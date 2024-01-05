@@ -1,0 +1,100 @@
+---
+title: Path into the deeply nested Typescript objects
+description: Deep dive on how to access deeply nested objects in Typescript to enable type safety
+pubDate: 2024-01-05
+published: true
+featured: true
+tags:
+    - Typescript
+    - Javascript
+    - Functional Programming
+---
+
+Hello everyone, if you have worked with libraries like `react use form` or `formik` you might have seen that you could pass around your state's key in form of a string where each level can be separated by a dot. For example, if you have a state like this:
+
+```typescript
+const state = {
+    user: {
+        name: "John",
+        age: 20,
+        address: {
+            street: "123 Main St",
+            city: "New York",
+            state: "NY"
+        }
+    }
+};
+
+// Accessing the object in some function
+const name = useSelecter(state, "user.name");
+// name = "John"
+```
+
+Today we will learn, how we can achieve this in Typescript. We will also learn how to make it type safe so that we can get the type of the value we are accessing.
+So let's get started.
+
+Suppose we are working on a app that takes user data and stores it in the state. The state is a deeply nested object. We want to access the value of the state by passing the path of the value as a string. For example, if we want to access the name of the user, we will pass the path as `user.name`. We will also make it type safe so that we can get the type of the value we are accessing.
+
+Here's how our state looks like:
+
+```typescript
+const state = {
+    user: {
+        name: "John",
+        age: 20,
+        address: {
+            street: "123 Main St",
+            city: "New York",
+            state: "NY"
+        },
+        friends: [
+            {
+                name: "Jane",
+                age: 20
+            },
+            {
+                name: "Bob",
+                age: 20
+            }
+        ]
+    }
+};
+```
+
+Now we want to pass around the state in functions or methods to access or manipulate the state. We want to access the state by passing the path of the value as a string. For example, if we want to access the name of the user, we will pass the path as `user.name`. We will also make it type safe so that we can get the type of the value we are accessing.
+
+```typescript
+type State = typeof state;
+// this will give the type of the state
+```
+
+Now suppose there's a hook called `useSelector` which takes the state and the path of the value as a string and returns the value of the state.
+
+```typescript
+const name = useSelecter(state, "user.name");
+```
+
+Here we want a full type safety. we want to make sure that user passes around the correct path of the value. If the user passes the wrong path. For that we can do something like this:
+
+```typescript
+type PathInto<T extends Record<string, any>> = keyof {
+    [K in keyof T as T[K] extends Record<string, any>
+        ? `${K & string}.${PathInto<T[K]> & string}`
+        : K]: T[K];
+};
+
+// this will give the type of the path
+```
+
+Here's an explaination to this:
+
+1. We are using the `keyof` operator to get the keys of the object.
+2. We are using the `as` operator to map the keys of the object to the type of the value of the key.
+3. We are using the `extends` operator to check if the value of the key is an object or not.
+4. If the value of the key is an object, we are using the `as` operator to map the key to the type of the value of the key.
+5. If the value of the key is not an object, we are using the `as` operator to map the key to the type of the value of the key.
+6. It follows the same pattern for the nested objects until it reaches the end of the object.
+
+Note: It won't work for cyclic objects.
+
+### Thank You
