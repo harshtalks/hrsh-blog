@@ -1,0 +1,213 @@
+---
+title: This is how I manage my routes in Next.js (and It's type safe too) 🚀🚀🚀
+pubDate: 2024-05-04
+description: I recently discovered a new way to manage my routes in Next.js using zod and it turned out to be more effective than I thought. I'm going to show you how I did it.
+featured: true
+published: true
+tags:
+    - Typescript
+    - Javascript
+    - Web Development
+    - Next.js
+---
+
+Typescript has become an important tool in my web development workflow. It has helped me to catch bugs before they even happen and it has made me a better developer. If you are working with Next.js just like me, You may have come across to the one thing where the typescript falls short, and that is managing your routes in a type safe way.
+
+Due to architectural decisions made by the Next.js team, managing routes in a type safe way is not possible out of the box. But that doesn't mean that we can't do it. That is exactly why I'm going to show you how I manage my routes in Next.js in a type safe way.
+
+Note: Next.js has officially rolled out an experimental feature called `typedRoutes` which is a step in the right direction. As per the official docs, you can use it by adding the following to your `next.config.js` file:
+
+```ts
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    typedRoutes: true,
+  },
+}
+ 
+module.exports = nextConfig
+``` 
+
+But there are few problem with this solution:
+- you can only get the intelisense over the path itself, for example it will be able to tell you that your href in Link tag is not correct but it wont give you any details about the query params or the route params.
+- you can't be sure of the schema of the query params or the route params for each route. There's always a chance that you may pass the wrong type of query params or route params to the route.
+
+For example, this is how Next.js include the usage of this feature in their docs: 
+
+```tsx
+// No TypeScript errors if href is a valid route
+<Link href="/about" />
+<Link href="/blog/nextjs" />
+<Link href={`/blog/${slug}`} />
+<Link href={('/blog' + slug) as Route} />
+ 
+// TypeScript errors if href is not a valid route
+<Link href="/aboot" />
+```
+
+```tsx
+import type { Route } from 'next'
+import Link from 'next/link'
+ 
+function Card<T extends string>({ href }: { href: Route<T> | URL }) {
+  return (
+    <Link href={href}>
+      <div>My Card</div>
+    </Link>
+  )
+}
+```
+
+If you think about it a little, the `Route` type is just a union of all the possible routes in your application. It doesn't give you any information about the query params or the route params for each route. And the errors you may get due to wrong paths, are also not going to help you in runtime as these typescript yelling will only happen in the compile time, not in the runtime.
+
+You may have guessed the solution by now, and yes it involves zod. (or yup, IDK why you would choose this over zod)
+
+So, these are the following requirements that I want to achieve with my route management system:
+- I want to have a type safe way to manage my routes in Next.js
+- I want to have a type safe way to manage my query params and route params for each route
+- I want to have a type safe way to generate the href for each route, or pass it around as value to any navigation function
+
+### Getting our hands dirty
+
+First, we are in a next.js project, so we need to install the following packages:
+
+```bash
+pnpm add zod tempeh
+```
+
+I have used pnpm here, you can use npm or yarn or bun as well. 
+
+<strong>Tempeh</strong> is the library to provide us with utilities to manage our routes and zod will be the schema provider here. (More about tempeh in few moments)
+
+
+#### File Structure
+
+Here's how my file structure looks like:
+
+```
+├── app
+|  ├── layout.tsx   
+|  ├── page.tsx     
+|  ├── posts
+|  |  ├── [userId]
+|  |  |  ├── page.tsx
+|  |  |  ├── route.info.ts
+|  |
+├── package.json
+├── ts.config.json
+└── next.config.mjs
+└── route.config.ts
+```
+
+As you can seem, we are in a typical next.js project, with a `posts` directory which has a dynamic route `[userId]` and a `route.info.ts` file in it. The `route.info.ts` file will contain the schema for the route and the query params and route params for the route.
+
+
+At root level we have a file named `route.config.ts` which will contain the singleton instance of the route builder: 
+
+```ts
+import { routeBuilder } from "tempeh";
+import { env } from "./env";
+
+// you should only have a single instance of the route builder in your app. having multiple instances will result in uncaught error
+const { createRoute } = routeBuilder.getInstance({
+  formattedValidationErrors: true,
+  additionalBaseUrls: {
+    GITHUB_API: "https://api.github.com",
+    API: env.API_URL,
+    DASHBOARD: env.DASHBOARD_URL,
+  },
+});
+
+export default createRoute;
+
+```
+
+By default, the base url for the routes is `/`, but you can provide additional base urls for your routes. For example, if you have an api route, you can provide the base url for the api in the `additionalBaseUrls` object. additionally, you can also change your base url for the routes by providing a base url in the `deaultBaseUrl` key in the object. You can also define a custom baseUrl for each route in `createRoute` as well. Tempeh is flexible in that way.
+
+#### route.info.ts
+the `posts/[userId]/page.tsx` is a page in our app that contains posts for a user with given userId. Now this page will also take some filters as query params, and we want to make sure that the filters are of the correct type. What we essentially want is this:
+
+```md
+Params: 
+- userId: string
+
+SearchParams: 
+- limit: number
+- sortBy: 'asc' | 'desc'
+- query: string
+``` 
+
+```ts
+// posts/[userId]/route.info.ts
+
+import * as z from "zod";
+import createRoute from "@/route.config";
+
+// we will create our route config here
+
+const paramSchema = z.object({
+  userId: z.string(),
+});
+
+const searchParamSchema = z.object({
+  sortBy: z.enum(["asc", "desc"]).optional().default("asc"),
+  limit: z.string().pipe(z.coerce.number()).optional(),
+  query: z.string().optional(),
+});
+
+const UserPostsRoute = createRoute({
+  name: "user-posts",
+  fn: ({ userId }) => `/posts/${userId}`,
+  paramsSchema: paramSchema,
+  searchParamsSchema: searchParamSchema,
+  options: {
+    internal: true,
+  },
+});
+
+export default UserPostsRoute;
+```
+
+You can read more about how tempeh works in the [official docs](https://tempeh-docs.vercel.app/)
+
+Here: 
+- We have created a `paramSchema` which is a zod schema for the route params for the route
+- We have created a `searchParamSchema` which is a zod schema for the query params for the route
+- We have created a `UserPostsRoute` which is a route config for the route. It contains the name of the route, the function to generate the href for the route, the schema for the route params and the schema for the query params. The name of the route is important as it will be used under the hood to keep track of all the routes and you will not be able to create two routes with the same name.
+- `options` is a required argument in the `createRoute` function, it can be used to pass some additional options to the route config. Here we have passed `internal: true` which means that this route is an internal route and does not require any base route. For an external route such as an api, you can pass `internal: false` and provide a base route in the same object.
+
+#### using our route config
+
+We can use our route config in a page where we want to link this page like this:
+
+```tsx
+// user/[userId]/page.tsx
+import UserPostsRoute from "../posts/[userId]/route.info";
+
+export default function UserPage() {
+  return (
+    <>
+      <UserDetails />
+      <UserPostsRoute.Link
+        params={{ id: "1234-5678-9012-3456" }}
+        searchParams={{ sortBy: "desc" }}
+      >
+        <Button>User Posts</Button>
+      </UserPostsRoute.Link>
+    </>
+  );
+}
+
+```
+
+You will get intellisense for the params and searchParams for the route. If you pass the wrong type of params or searchParams, you will get a typescript error. This way you can be sure that you are passing the correct type of params and searchParams to the route.
+
+### Links
+
+- [Tempeh Docs](https://tempeh-docs.vercel.app/)
+- [Tempeh github](https://github.com/harshtalks/tempeh)
+
+
+
+    
+
