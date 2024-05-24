@@ -160,9 +160,6 @@ const UserPostsRoute = createRoute({
   fn: ({ userId }) => `/posts/${userId}`,
   paramsSchema: paramSchema,
   searchParamsSchema: searchParamSchema,
-  options: {
-    internal: true,
-  },
 });
 
 export default UserPostsRoute;
