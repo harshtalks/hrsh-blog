@@ -174,7 +174,6 @@ Here:
 - We have created a `paramSchema` which is a zod schema for the route params for the route
 - We have created a `searchParamSchema` which is a zod schema for the query params for the route
 - We have created a `UserPostsRoute` which is a route config for the route. It contains the name of the route, the function to generate the href for the route, the schema for the route params and the schema for the query params. The name of the route is important as it will be used under the hood to keep track of all the routes and you will not be able to create two routes with the same name.
-- `options` is a required argument in the `createRoute` function, it can be used to pass some additional options to the route config. Here we have passed `internal: true` which means that this route is an internal route and does not require any base route. For an external route such as an api, you can pass `internal: false` and provide a base route in the same object.
 
 #### using our route config
 
