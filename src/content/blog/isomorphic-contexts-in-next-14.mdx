@@ -13,34 +13,82 @@ tags:
     - Node
 ---
 
+import { Image } from "astro:assets";
 
-<blockquote class="p-4 border-s-4 border-gray-300 bg-gray-50">
-    <p class="text-xl italic font-medium leading-relaxed">isomorphic. adjective. iso·​mor·​phic ˌī-sə-ˈmȯr-fik. : being of identical or similar form or shape or structure.</p>
-</blockquote>
+<Image
+    src="https://preview.redd.it/shall-we-consider-this-new-logo-v0-k3b8cs0ob8ya1.jpg?auto=webp&s=427c820123dc5af6297224783f143db2077b0c69"
+    title={"next php"}
+    alt={"next php"}
+    width={200}
+    height={100}
+    className="w-full h-full"
+/>
 
+<div class="p-4 border-s-4 border-gray-300 bg-gray-50">
+    <p class="text-xl italic font-medium leading-relaxed text-gray-900">
+        isomorphic. adjective. iso·​mor·​phic ˌī-sə-ˈmȯr-fik. : being of
+        identical or similar form or shape or structure."
+    </p>
+</div>
 
-If you've been part of the web ecosystem for a while, especially in Node.js (backend), you've likely encountered [isomorphic-fetch](https://www.npmjs.com/package/isomorphic-fetch). This library was crucial because fetch wasn't natively available in Node.js for a long time. 
+If you've been part of the web ecosystem for a while, especially in Node.js (backend),
+you've likely encountered [isomorphic-fetch](https://www.npmjs.com/package/isomorphic-fetch).
+This library was crucial because fetch wasn't natively available in Node.js for a
+long time.
 
 "Isomorphic" in web development means code that runs unchanged on both client-side (browser) and server-side (e.g., Node.js). This approach lets developers write code once for use in multiple environments, streamlining development and maintaining consistency across the stack.
 
 ### What is an Isomorphic Context?
 
-React core team, in their version 16.3 release, introduced a new feature called Context API. This API allows you to share data among parent and its child components without passing props down manually at every level. This is especially useful when you have deeply nested components and you need to pass data from the top to the bottom. There are situations where we need to share data between the server components with parent-child relationship. 
+React's Context API, introduced in version 16.3, made sharing data between parent and child components easier. You don't have to pass props manually through every level anymore. This is really helpful when you have deeply nested components and need to send data from top to bottom.
 
-Next.js 13 introduced server components, which are components that run on the server and can be used to fetch data, perform server-side rendering, and more. Server components are a great way to improve performance and reduce the time it takes to load a page. But there are certain problems developers faced when using Next.js server components: 
+Next.js 13 brought in server components, which run on the server to fetch data and do server-side rendering. They make pages load faster and perform better. But since these components only run on the server, they can't use browser or React-specific tools like `useRouter` or `useContext`. This makes it hard to share data between server components or pass it down the component tree.
 
-1. No access of context in server components, as the context is not available in the server components.
-2. You can't get pathname, search params or route params in the server components. and only possible way for now is to pass them as props to the server components from the page.
+Developers ran into two main problems with server components:
 
-To solve these problems, People had workaround solutions such as marking leaf components as client components and use react/next hooks directly inside them such as `useRouter` or `useContext`. This works 90% of the time, but for the rest 10%, it's a pain to manage.
+1. They can't use context in server components because it's not available there.
+2. They can't get information about the current page path, search parameters, or route parameters in server components. The only way to do this right now is to pass this info as props from the page to the server components.
 
+-   To solve these problems, People had workaround solutions such as marking leaf components as client components and use react/next hooks directly inside them such as `useRouter` or `useContext`. This works 90% of the time, but for the rest 10%, it's a pain to manage.
+-   One other solution users found was to use Next.js middleware. You would generally set some sort of header for each incoming request in middleware which can then be used in server components with `cookies` or `headers` function. This is a good solution but it will force you out of Next.js caching/SSG behavior if used on layout or page level.
 
-import { Image } from "astro:assets";
+```ts
+// middleware.ts
+import { NextResponse } from 'next/server';
+export function middleware(request: Request) {
+
+  // Store current request url in a custom header, which you can read later
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-url', request.url);
+
+  return NextResponse.next({
+    request: {
+      // Apply new request headers
+      headers: requestHeaders,
+    }
+  });
+```
+
+<Image
+    src="https://user-images.githubusercontent.com/411625/216581276-f144aede-6ab0-47c4-8eec-cd917259c885.png"
+    title={"dynamic functions"}
+    alt={"dynamic functions"}
+    width={400}
+    height={300}
+    className="w-full h-full"
+/>
+
+An <strong> isomorphic context </strong> would solve these issues. It would combine:
+
+-   A way to share context among server components, keeping the parent-child relationship.
+-   The regular client-side React context.
+
+This isomorphic context would work on both the server and client sides. It would let developers share data easily between components, no matter where they run. This would make building apps with both server and client components much simpler and more efficient.
 
 <Image
     src="https://miro.medium.com/v2/resize:fit:1154/1*bi1yIMb3lF1C8wJuhmxbmQ.jpeg"
-    title={"party time builder io"}
-    alt={"party time"}
+    title={"old times"}
+    alt={"old times"}
     width={400}
     height={300}
     className="w-full h-full"
@@ -53,16 +101,15 @@ Luckily for us, solution also lies in the APIs provided to use by recent release
 1. AsyncLocalStorage in Node
 2. Cache function from React 19
 
-
 #### AsyncLocalStorage in Node
 
-What is AsyncLocalStorage? It is a new feature in Node.js 16.8.0 that allows you to store data in a context that is accessible across async calls. This is especially useful when you need to share data between different parts of your application, such as middleware and route handlers. Next.js uses this internally for the `headers()` and `cookies()` functions. The fact that it only stays in the same async context (a single request response cycle) is what makes it perfect for server components as server components are never <strong>rerendered</strong> again once sent to the client. 
+What is AsyncLocalStorage? It is a new feature in Node.js 16.8.0 that allows you to store data in a context that is accessible across async calls. This is especially useful when you need to share data between different parts of your application, such as middleware and route handlers. Next.js uses this internally for the `headers()` and `cookies()` functions. The fact that it only stays in the same async context (a single request response cycle) is what makes it perfect for server components as server components are never <strong>rerendered</strong> again once sent to the client.
 
 #### AsyncLocalStorage in action
 
 We are in a Next.js environment with given file structure:
 
-```bash
+```
 └── package.json
 └── app
 │   └── page.tsx
@@ -72,12 +119,12 @@ We are in a Next.js environment with given file structure:
     └── context.tsx
 ```
 
-
 Note: This blog requires you to have good knowledge of Typescript generics.
 
-We have a `context.tsx` file inside the server-context folder and this is where we will define our logic for context that is shared among server component.
+We have a `context.tsx` file inside the server-context folder and this is where we will define our logic for context that is shared among server component. Note that an AsyncLocalStorage store once set, will be available in all the parts of your application in the same request-response cycle, provided it runs on the server. That means the store will be available in the server components out of the context boundary aswell. <strong> But the idea is to mimic the behaviour of React context API in server.</strong>
 
 ##### context.tsx
+
 ```tsx
 // server-context/context.tsx
 // We need to make sure that this file is only imported in server environment.
@@ -85,20 +132,20 @@ import "server-only";
 import { AsyncLocalStorage } from "async_hooks";
 // A helper type to wrap our generic type into an object. useful when you want to extend the context with additional metadata.
 type BindServerContextStoreData<T> = {
-    storeValue: T
-}
+    storeValue: T;
+};
 
 // Type for our server context, we will try to make its signature similar to the react context so that it works well with our mental modal.
 export type ServerContext<T> = {
-  Provider: ({
-    children,
-    storeValue,
-  }: {
-    children: React.ReactNode;
-    storeValue: T;
-  }) => React.ReactNode;
-  store: AsyncLocalStorage<BindServerContextStore<T>>;
-  defaultValue: T;
+    Provider: ({
+        children,
+        storeValue
+    }: {
+        children: React.ReactNode;
+        storeValue: T;
+    }) => React.ReactNode;
+    store: AsyncLocalStorage<BindServerContextStore<T>>;
+    defaultValue: T;
 };
 ```
 
@@ -117,37 +164,41 @@ Now let's define our `ServerContext`:
 ```tsx
 // server-context/context.tsx
 export const createServerContext = <T,>(defaultValue: T): ServerContext<T> => {
-  const store: ServerContext<T>["store"] = new AsyncLocalStorage<
-    BindServerContextStore<T>
-  >();
-  return {
-    Provider: ({ children, storeValue }) => {
-      return (
-        <Fragment>
-          <SyncContext serverContextStore={store} storeValue={storeValue} />
-          {children}
-        </Fragment>
-      );
-    },
-    store,
-    defaultValue,
-  };
+    const store: ServerContext<T>["store"] = new AsyncLocalStorage<
+        BindServerContextStore<T>
+    >();
+    return {
+        Provider: ({ children, storeValue }) => {
+            return (
+                <Fragment>
+                    <SyncContext
+                        serverContextStore={store}
+                        storeValue={storeValue}
+                    />
+                    {children}
+                </Fragment>
+            );
+        },
+        store,
+        defaultValue
+    };
 };
 
 // We need to inject the store into the context so that it is available in the server components as well.
 const SyncContext = <T,>({
-  serverContextStore,
-  storeValue,
+    serverContextStore,
+    storeValue
 }: {
-  serverContextStore: AsyncLocalStorage<BindServerContextStore<T>>;
-  storeValue: T;
+    serverContextStore: AsyncLocalStorage<BindServerContextStore<T>>;
+    storeValue: T;
 }) => {
-  serverContextStore.enterWith({ storeValue });
-  return null;
+    serverContextStore.enterWith({ storeValue });
+    return null;
 };
 ```
 
 Let's understand the above code:
+
 1. We are defining a function `createServerContext` that takes a generic type `T` and a default value of type `T` and returns an object of type `ServerContext<T>`.
 2. Inside the function, we are creating an instance of `AsyncLocalStorage` with the generic type `BindServerContextStore<T>`.
 3. We are returning an object with three properties:
@@ -155,19 +206,20 @@ Let's understand the above code:
     - `store`: An instance of `AsyncLocalStorage` that takes a generic type `BindServerContextStore<T>`.
     - `defaultValue`: A default value of type `T`.
 4. We are defining a component `SyncContext` that takes two props `serverContextStore` and `storeValue` and returns `null`.
-    - This piece of code is very important as `enterWith` sets up a new asynchronous context with a predefined store value. Unlike run, it doesn't require a callback and affects all subsequent async operations in the current execution context. It's useful for scenarios where you need to establish a persistent context across multiple async operations without nesting callbacks. This method is particularly valuable in middleware scenarios or when setting up context for a series of related async tasks. 
+    - This piece of code is very important as `enterWith` sets up a new asynchronous context with a predefined store value. Unlike run, it doesn't require a callback and affects all subsequent async operations in the current execution context. It's useful for scenarios where you need to establish a persistent context across multiple async operations without nesting callbacks. This method is particularly valuable in middleware scenarios or when setting up context for a series of related async tasks.
 
 Now let's create a function to consume the context:
 
 ```tsx
 // server-context/context.tsx
 export const useServerContext = <T,>(serverCtx: ServerContext<T>) => {
-  const store = serverCtx.store.getStore();
-  return store?.storeValue || serverCtx.defaultValue;
+    const store = serverCtx.store.getStore();
+    return store?.storeValue || serverCtx.defaultValue;
 };
 ```
 
 Let's understand the above code:
+
 1. We are defining a function `useServerContext` that takes a generic type `T` and a `ServerContext<T>` and returns the store value or the default value of the context.
 2. Inside the function, we are getting the store value from the context using `getStore` method and returning the store value or the default value of the context.
 
@@ -181,27 +233,28 @@ import { ServerComponent } from "./_components/ServerComponent";
 import { createServerContext } from "@/server-context/context";
 
 type SearchParamsType = {
-  [k: string]: undefined | string | string[];
+    [k: string]: undefined | string | string[];
 };
 
 export const ctx = createServerContext<SearchParamsType>({});
 
 export default function Home({
-  searchParams,
+    searchParams
 }: {
-  searchParams: SearchParamsType;
+    searchParams: SearchParamsType;
 }) {
-  return (
-    <ctx.Provider storeValue={searchParams}>
-      <main className="flex min-h-screen flex-col items-center justify-between p-24">
-        <ServerComponent />
-      </main>
-    </ctx.Provider>
-  );
+    return (
+        <ctx.Provider storeValue={searchParams}>
+            <main className="flex min-h-screen flex-col items-center justify-between p-24">
+                <ServerComponent />
+            </main>
+        </ctx.Provider>
+    );
 }
 ```
 
 What we are doing here is:
+
 1. We are importing `ServerComponent` from `_components/ServerComponent`.
 2. We are importing `createServerContext` from `server-context/context`.
 3. We are defining a type `SearchParamsType` which is an object with keys of type `string` and values of type `undefined | string | string[]`.
@@ -217,25 +270,24 @@ import { useServerContext } from "@/server-context/context";
 import { ctx } from "../page";
 
 export const ServerComponent = () => {
-  const value = useServerContext(ctx);
-  return <div>this is a server context - {JSON.stringify(value)}</div>;
+    const value = useServerContext(ctx);
+    return <div>this is a server context - {JSON.stringify(value)}</div>;
 };
 ```
 
 What we are doing here is:
+
 1. We are importing `useServerContext` from `server-context/context`.
 2. We are importing `ctx` from `../page`.
 3. We are defining a component `ServerComponent` that uses the `useServerContext` hook with the `ctx` context.
 
-
 With just a single file, and a few lines of code, we have created a server context that can be used in server components. This is a powerful feature that can be used to share data between server components and pass data from the top to the bottom of the component tree without having to pass props manually at every level.
 
+### Making it isomorphic
 
-### Making it Isomorphic
+To make our context isomorphic, we need to make sure that it works on the client as well. we can achieve it by creating another context but this time using the React context API. Let's see how we can do it. There is a myth that we can't use React context in server components, but that's not true. We can use React context in server components as well and no, the children of a react context can be server component as well. However, the context itself can't be a server component and consumers of the context can't be server components.
 
-To make our context isomorphic, we need to make sure that it works on the client as well. we can achieve it by creating another context but this time using the React context API. Let's see how we can do it. There is a myth that we can't use React context in server components, but that's not true. We can use React context in server components as well and no, the children of a react context can be server component as well. However, the context itself can't be a server component and consumers of the context can't be server components. 
-
-Ideally what we will end up with is: 
+Ideally what we will end up with is:
 
 ```tsx
 // app/page.tsx
@@ -243,41 +295,38 @@ import { ServerComponent } from "./_components/ServerComponent";
 import { createServerContext } from "@/server-context/context";
 
 type SearchParamsType = {
-  [k: string]: undefined | string | string[];
+    [k: string]: undefined | string | string[];
 };
 
 export const ctx = createServerContext<SearchParamsType>({});
 
 export default function Home({
-  searchParams,
+    searchParams
 }: {
-  searchParams: SearchParamsType;
+    searchParams: SearchParamsType;
 }) {
-  return (
-    <ctx.Provider storeValue={searchParams}>
-    <ClientCtx.Provider value = {searchParams}>
-      <main className="flex min-h-screen flex-col items-center justify-between p-24">
-        <ServerComponent />
-      </main>
-    </ctx.Provider>
-    </ClientCtx.Provider>
-  );
+    return (
+        <ctx.Provider storeValue={searchParams}>
+            <ClientCtx.Provider value={searchParams}>
+                <main className="flex min-h-screen flex-col items-center justify-between p-24">
+                    <ServerComponent />
+                </main>
+            </ClientCtx.Provider>
+        </ctx.Provider>
+    );
 }
 ```
 
-
-
-#### cache() in React 19 (or Next 14)
+#### cache in React 19 (Next 14)
 
 If you remember, the only reason we were able to use `AsyncLocalStorage` in the server environment was because it preserves the value inside its store for a single request-response cycle and React Server Components are never rerendered once sent to the client. So React's `cache()` function also qualifies for this use case.
 
 ##### What is cache() in React 19?
 
-React 19 introduced a new feature called `cache()`. This function allows you to cache the result of a function call and reuse it across components in a single request cycle (single render, thus making it perfect for sharing data across server components). 
+React 19 introduced a new feature called `cache()`. This function allows you to cache the result of a function call and reuse it across components in a single request cycle (single render, thus making it perfect for sharing data across server components).
 
-- It only works with React Server Components.
-- React will invalidate the cache for all memoized functions for each server request.
-
+-   It only works with React Server Components.
+-   React will invalidate the cache for all memoized functions for each server request.
 
 ##### cache() in action
 
@@ -286,97 +335,107 @@ Let's see how we can use `cache()` in our server components:
 ```tsx
 import { cache } from "react";
 
-export const cacheStore = cache(() => {
-  return new Map<string, string>();
-});
+export default function cacheContext<TStoreValue>(
+    defaultValue: TStoreValue
+): [() => TStoreValue, (value: TStoreValue) => void] {
+    const cachedValue = cache(() => ({
+        store: defaultValue
+    }));
 
-export const setCacheStore = (key:string,value:string) => {
-    cacheStore().set(key,value)
-}
+    const getter = (): TStoreValue => {
+        return cachedValue().store;
+    };
 
-export const getCacheStore = (key:string) => {
-    return cacheStore().get(key)
+    const setter = (value: TStoreValue): void => {
+        cachedValue().store = value;
+    };
+
+    return [getter, setter];
 }
 ```
 
 What we are doing here is:
+
 1. We are importing `cache` from `react`.
-   - This will cache the map for one render (one request cycle) and all the components that uses/consumes this cached map object will receive the same object. 
-   - Since the server response for a page comes in a sequence, therefore, when we set the value in a parent component, the child component will receive the updated value. and changing the same later on in the child component will affect the parent component as well. (This is the same behavior as `AsyncLocalStorage` or React Context)
-2. We are defining a function `cacheStore` that returns a new `Map<string, string>`.
-3. We are defining a function `setCacheStore` that takes a `key` and a `value` and sets the `key` and `value` in the cache store.
-4. We are defining a function `getCacheStore` that takes a `key` and returns the value of the `key` from the cache store.
+    - This will cache the map for one render (one request cycle) and all the components that uses/consumes this cached map object will receive the same object.
+    - Since the server response for a page comes in a sequence, therefore, when we set the value in a parent component, the child component will receive the updated value. and changing the same later on in the child component will affect the parent component as well. (This is the same behavior as `AsyncLocalStorage` or React Context)
+2. We are defining a function `cacheContext` that takes a default value of type `TStoreValue` and returns an array with two functions:
+    - `getter`: A function that returns the cached value.
+    - `setter`: A function that sets the cached value.
+3. We are using the `cache()` function to cache the default value and return a function that returns the cached value. Rest is self explanatory.
 
 Now let's see how we can use the cache in our server components:
 
+Suppose we are in a Next.js website with locale support and we want to share the locale across server components. We can use the `cacheContext` function to achieve this. Almost all of the libraries for i18nl comes with a context provider to provide locale in client components so our cacheContext will be able to achieve the same in server components.
+
 ```tsx
 // page.tsx
-import Image from "next/image";
+import cacheContext from "@/server-context/cached-store";
 import { ServerComponent } from "./_components/ServerComponent";
-import { createServerContext } from "@/server-context/context";
-import { cacheStore, setCacheStore } from "@/server-context/cached-store";
 
-type SearchParamsType = {
-  [k: string]: undefined | string | string[];
+type ParamsType = {
+    [k: string]: undefined | string | string[];
 };
 
-export const ctx = createServerContext<SearchParamsType>({});
+// providing default value as "pl"
+export const [getLocale, setLocale] = cacheContext("pl");
 
 export default function Home({
-  searchParams,
+    searchParams,
+    params: { locale }
 }: {
-  searchParams: SearchParamsType;
+    searchParams: SearchParamsType;
+    params: SearchParamsType;
 }) {
-  setCacheStore("hello", "world");
-  return (
-    <ctx.Provider storeValue={searchParams}>
-      <main className="flex min-h-screen flex-col items-center justify-between p-24">
-        <ServerComponent />
-      </main>
-    </ctx.Provider>
-  );
+    // setting the locale
+    setLocale(locale);
+
+    return (
+        <main>
+            <ServerComponent />
+        </main>
+    );
 }
 ```
 
-here we have set the value in the parent component and we will see how we can access the same value in the child component.
+As you can see, we are using the `cacheContext` function to create a cached store for the locale. We are setting the locale in the parent component and using it in the server component.
 
 ```tsx
 // _components/ServerComponent.tsx
-import { useServerContext } from "@/server-context/context";
-import { ctx } from "../page";
-import { getCacheStore } from "@/server-context/cached-store";
+import { getLocale } from "../page";
 
+// accessing our locale here
 export const ServerComponent = () => {
-  const value = useServerContext(ctx);
-  return (
-    <div>
-      this is a server context - {JSON.stringify(value)} -{" "}
-      {getCacheStore("hello")}
-    </div>
-  );
+    const locale = getLocale();
+    return <div>this is a server context - {locale}</div>;
 };
 ```
 
-We are using the `getCacheStore` function to get the value of the key `hello` that we set in the parent component. 
+We have imported the `getLocale` function from the `page` file and used it in the `ServerComponent` component to get the locale. Now we have successfully shared the locale across server components using the `cache()` function.
 
 This is how we can use the `cache()` function in React 19 to share data across server components.
 
-
 ### When to use it:
 
-in 95% of the cases, you do not need any of these solutions. I have this theory that if you need to rely some custom implementation or a hacky solution so much in a vert opinionated framework like Next.js, you are probably doing something wrong. However there are times when you do not have any other option but to use these solutions.
+in 95% of the cases, you do not need any of these solutions. I have this theory that if you need to rely some custom implementation or a hacky solution so much in a very opinionated framework like Next.js, you are probably doing something wrong because if you had to weigh in on something so much, the framework would have already done it for you. (Same applies for old React hooks like useMemo/useCallback.)
 
-1. When you need to share data between server components.
-2. When you want search params, path params or pathname in the server components.
-3. When you want to use any Next specific config in the server components.
+However there are times when you do not have any other option but to use these solutions.
+
+1. When you need to share data between server components. (locales, computation results etc.)
+2. When you want route params in the server components.
+3. When you want to use any Next specific config in the server components. (i.e. Route Segment Config)
+
+### Conclusion
+
+In this blog, we learned how to use isomorphic contexts in Next.js 14. We learned how we can share data among parent and its child components in server components similar to the client components. We also learned how we can use `AsyncLocalStorage` in Node.js and `cache()` function in React 19 to achieve this. We also learned when to use these solutions and when not to use them. For most of the cases, like sharing locales or params etc. these solutions works fine without any performance issues.
 
 NOTE: Please make sure, you are not using these solutions in Layout.tsx as Layout.tsx are not rerendered on every request cycle and you may get stale/unwanted data.
-Please read for more: - https://github.com/vercel/next.js/issues/43704#issuecomment-2090798307 
+Please read for more: - https://github.com/vercel/next.js/issues/43704#issuecomment-2090798307
 
 Working Codesandbox: https://codesandbox.io/p/devbox/isomorphic-context-n45z8j
 
 ## References:
 
-- https://www.freecodecamp.org/news/async-local-storage-nodejs/
-- https://react.dev/reference/react/cache
-- https://nextjs.org/docs/app/building-your-application/caching#request-memoization
+-   https://www.freecodecamp.org/news/async-local-storage-nodejs/
+-   https://react.dev/reference/react/cache
+-   https://nextjs.org/docs/app/building-your-application/caching#request-memoization
