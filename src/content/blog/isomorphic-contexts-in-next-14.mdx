@@ -1,6 +1,6 @@
 ---
 title: Isomorphic Contexts in Next.js 14
-description: This blog is a deep dive on how to use isomorphic contexts in Next.js 14. We will learn how we can share data among parent and its child components in server components similar to the client components.
+description: This blog explores isomorphic contexts in Next.js 14. We'll learn how to share data between parent and child components in server components, similar to how it's done in client components.
 pubDate: 2024-06-08
 published: true
 featured: true
@@ -49,8 +49,9 @@ Developers ran into two main problems with server components:
 1. They can't use context in server components because it's not available there.
 2. They can't get information about the current page path, search parameters, or route parameters in server components. The only way to do this right now is to pass this info as props from the page to the server components.
 
--   To solve these problems, People had workaround solutions such as marking leaf components as client components and use react/next hooks directly inside them such as `useRouter` or `useContext`. This works 90% of the time, but for the rest 10%, it's a pain to manage.
--   One other solution users found was to use Next.js middleware. You would generally set some sort of header for each incoming request in middleware which can then be used in server components with `cookies` or `headers` function. This is a good solution but it will force you out of Next.js caching/SSG behavior if used on layout or page level.
+To tackle these challenges, developers often resorted to workaround solutions. One common approach was to designate leaf components as client components and directly integrate React/Next.js hooks like `useRouter` or `useContext` within them. While effective in most cases, this method requires you to have clear boundaries between server and client components, which can be cumbersome to maintain and manage.
+
+Another approach developers discovered was using Next.js middleware. This method involves setting a header for each incoming request in the middleware, which can then be accessed in server components using the `cookies` or `headers` function. While this solution works, it comes with a drawback: if used at the layout or page level, it disables Next.js caching and static site generation (SSG) capabilities.
 
 ```ts
 // middleware.ts
@@ -67,6 +68,15 @@ export function middleware(request: Request) {
       headers: requestHeaders,
     }
   });
+
+// /app/layout.tsx
+import { headers } from 'next/headers';
+
+export default function RootLayout() {
+  const headersList = headers();
+  // read the custom x-url header
+  const header_url = headersList.get('x-url') || "";
+}
 ```
 
 <Image
@@ -121,9 +131,7 @@ We are in a Next.js environment with given file structure:
 
 Note: This blog requires you to have good knowledge of Typescript generics.
 
-We have a `context.tsx` file inside the server-context folder and this is where we will define our logic for context that is shared among server component. Note that an AsyncLocalStorage store once set, will be available in all the parts of your application in the same request-response cycle, provided it runs on the server. That means the store will be available in the server components out of the context boundary aswell. <strong> But the idea is to mimic the behaviour of React context API in server.</strong>
-
-##### context.tsx
+In our context.tsx file within the server-context folder, we define the logic for context shared among server components. It's important to understand that an AsyncLocalStorage store, once set, is accessible throughout your application during the same request-response cycle on the server. This means the store is available in server components even outside the context boundary. However, our goal here is to mimic the behavior of the React Context API on the server, providing a familiar pattern for managing and sharing state across server components.
 
 ```tsx
 // server-context/context.tsx
@@ -283,9 +291,9 @@ What we are doing here is:
 
 With just a single file, and a few lines of code, we have created a server context that can be used in server components. This is a powerful feature that can be used to share data between server components and pass data from the top to the bottom of the component tree without having to pass props manually at every level.
 
-### Making it isomorphic
+#### Making it isomorphic
 
-To make our context isomorphic, we need to make sure that it works on the client as well. we can achieve it by creating another context but this time using the React context API. Let's see how we can do it. There is a myth that we can't use React context in server components, but that's not true. We can use React context in server components as well and no, the children of a react context can be server component as well. However, the context itself can't be a server component and consumers of the context can't be server components.
+To create an isomorphic context, we need to ensure it functions on both server and client sides. We can achieve this by creating an additional context using the React Context API. There's a common misconception that React context can't be used with server components, but this isn't entirely accurate. While the context itself and its consumers must be client components, we can indeed use React context in server components, and the children of a React context can be server components. This approach allows us to leverage the benefits of both server-side rendering and client-side interactivity, providing a more flexible and efficient way to manage shared state across our application.
 
 Ideally what we will end up with is:
 
@@ -317,11 +325,9 @@ export default function Home({
 }
 ```
 
-#### cache in React 19 (Next 14)
+#### cache() in React 19 (Next 14)
 
-If you remember, the only reason we were able to use `AsyncLocalStorage` in the server environment was because it preserves the value inside its store for a single request-response cycle and React Server Components are never rerendered once sent to the client. So React's `cache()` function also qualifies for this use case.
-
-##### What is cache() in React 19?
+The use of `AsyncLocalStorage` in the server environment is effective because they all preserve values for a single request-response cycle. This means that from the moment a request hits your server until the response is sent back to the client, these tools maintain consistent data. React's `cache()` function fits into this category too, as it memoizes and deduplicates computations or API responses within a single render. This behavior is particularly useful with React Server Components, which render once on the server and don't re-render on the client. By using these methods, we can create a kind of async context that behaves similarly to React's Context API on the server, allowing data sharing among server components within that single request-response or render cycle.
 
 React 19 introduced a new feature called `cache()`. This function allows you to cache the result of a function call and reuse it across components in a single request cycle (single render, thus making it perfect for sharing data across server components).
 
@@ -417,7 +423,9 @@ This is how we can use the `cache()` function in React 19 to share data across s
 
 ### When to use it:
 
-in 95% of the cases, you do not need any of these solutions. I have this theory that if you need to rely some custom implementation or a hacky solution so much in a very opinionated framework like Next.js, you are probably doing something wrong because if you had to weigh in on something so much, the framework would have already done it for you. (Same applies for old React hooks like useMemo/useCallback.)
+In 95% of cases, you probably don't need these complex solutions. I have this theory: if you find yourself relying heavily on custom implementations or hacky solutions in a very opinionated framework like Next.js, you might be overcomplicating things.
+
+Think about it - if something was really necessary, wouldn't the framework have already included it? It's like those good old memory eating React hooks, useMemo and useCallback. Most of the time, you don't actually need them.
 
 However there are times when you do not have any other option but to use these solutions.
 
