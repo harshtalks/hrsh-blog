@@ -24,6 +24,11 @@ import { Image } from "astro:assets";
     className="w-full h-full"
 />
 
+<div class="p-4 text-sm text-gray-800 mb-4 rounded-lg bg-gray-50" role="alert">
+    <span class="font-medium">Note: </span>I am assuming, you have worked with
+    Nextjs and Typescript generics before.
+</div>
+
 <div class="p-4 border-s-4 border-gray-300 bg-gray-50">
     <p class="text-xl italic font-medium leading-relaxed text-gray-900">
         isomorphic. adjective. iso·​mor·​phic ˌī-sə-ˈmȯr-fik. : being of
@@ -106,7 +111,7 @@ This isomorphic context would work on both the server and client sides. It would
 
 ### Server Contexts in Next.js 14
 
-Luckily for us, solution also lies in the APIs provided to use by recent releases of Node.js and React 19 (We can access them in Next.js 14 as of now). The two of the solutions are:
+Luckily for us, the solution also lies in the APIs provided to use by recent releases of Node.js and React 19 (We can access them in Next.js 14 as of now). The two of the solutions are:
 
 1. AsyncLocalStorage in Node
 2. Cache function from React 19
@@ -117,7 +122,7 @@ What is AsyncLocalStorage? It is a new feature in Node.js 16.8.0 that allows you
 
 #### AsyncLocalStorage in action
 
-We are in a Next.js environment with given file structure:
+We are in a Next.js environment with the given file structure:
 
 ```
 └── package.json
@@ -128,8 +133,6 @@ We are in a Next.js environment with given file structure:
 └── server-context
     └── context.tsx
 ```
-
-Note: This blog requires you to have good knowledge of Typescript generics.
 
 In our context.tsx file within the server-context folder, we define the logic for context shared among server components. It's important to understand that an AsyncLocalStorage store, once set, is accessible throughout your application during the same request-response cycle on the server. This means the store is available in server components even outside the context boundary. However, our goal here is to mimic the behavior of the React Context API on the server, providing a familiar pattern for managing and sharing state across server components.
 
@@ -440,7 +443,7 @@ In this blog, we learned how to use isomorphic contexts in Next.js 14. We learne
 NOTE: Please make sure, you are not using these solutions in Layout.tsx as Layout.tsx are not rerendered on every request cycle and you may get stale/unwanted data.
 Please read for more: - https://github.com/vercel/next.js/issues/43704#issuecomment-2090798307
 
-Working Codesandbox: https://codesandbox.io/p/devbox/isomorphic-context-n45z8j
+Codesandbox Link: https://codesandbox.io/p/devbox/isomorphic-context-n45z8j?embed=1
 
 ## References:
 
