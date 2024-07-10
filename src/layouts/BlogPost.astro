@@ -15,12 +15,9 @@ export interface Props {
 
 const { post } = Astro.props;
 
-const { title, description, pubDate, updatedDate, heroImage,tags } = post.data;
+const { title, description, pubDate, updatedDate, heroImage,tags,image } = post.data;
 
-const ogUrl = new URL(
-    heroImage ? heroImage : `${title.replace(/\s+/g, "-").toLowerCase()}.png`,
-    Astro.url.origin
-).href;
+
 
 const { Content } = await post.render();
 
@@ -31,7 +28,7 @@ const timeToRead =  readingTime(post.body).text;
 <Layout
     title={`${title} - ${SITE.title}`}
     description={description}
-    image={ogUrl}
+    image={image}
 >
     <SectionContainer class="wrap wrap-px flex justify-center px-4 sm:gap-16 sm:px-8">
         <div class="flex mt-32 w-full">
