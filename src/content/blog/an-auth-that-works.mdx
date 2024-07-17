@@ -1,0 +1,105 @@
+---
+title: An Authentication service that works
+pubDate: 2024-07-15
+description: useEffect is a great hook and I used it a lot for almost all the problems I had to solve. But it's not perfect and it can be a source of bugs.
+tags:
+    - react
+    - javascript
+    - hooks
+published: true
+featured: true
+---
+
+import { Image } from "astro:assets";
+
+<Image
+    src="https://imgs.xkcd.com/comics/authorization.png"
+    title={"xkcd Authorization: https://xkcd.com/1200"}
+    alt={"xkcd Authorization"}
+    width={300}
+    height={300}
+    className="mx-auto"
+/>
+
+### !!! Still writing... !!! Draft
+
+Over the past few months, I've dedicated significant effort to developing an exceptional authentication service, an Auth that just slaps. While my original intention was to create a comprehensive CRUD application to familiarize myself with advanced concepts of tRPC, I found myself primarily focused on perfecting the authentication component. I think it may have resulted due to my previous experiences with authentication services that were either too complex or too simple. I wanted to create an authentication service that was just right. I ended up doing a lot of research and experimenting with different approaches to authentication. I wanted to share my findings with you. Your opinions are going to be not as same as mine, but hey this is my blog, so I will write whatever I want.
+
+### Tech Stack
+
+-   I used Next.js for the frontend and backend. So yeah, Node.js is my backend here, and before you come at me with all those Javascript slandering, I'd advice you to go thru this (http://ithare.com/five-myths-used-in-golang-vs-node-js-debate). I'm a frontend heavy web engineer so my focus will always be on making the architecture aligned towards the BFF (Backend for Frontend) pattern.
+-   I used lucia for all kind of auth related primitives such as creating sessions, verifying sessions, etc. Lucia is a work of art and this is like my top 5 libraries that I have come across.
+-   I used sqlite for the database. I mainly chose it because I love Turso, and works really well with drizzle.
+-   I used tRPC for the API layer. I have been using tRPC for a while now and you know, the REST is a history.
+
+## Session-Based Authentication vs Token-Based Authentication
+
+My first hot take - `Session` based auth over `JWT` or Token based auth. I have used jwt based auth a lot of times during my work, and even in toy projects and I never faced any problems with it. It was simple, easy to implement and most importantly, it just works. But you know what else works? a freaking `Basic Auth` but it does not mean, I will use it in a production app that I want to scale to millions of users.
+
+People often tell me, that the problem with Session based auth is that it does not scale. You have introduced a data layer in a service that could have been achieved with stateless manner if you have stuck with JWTs or Tokens.
+
+They are not wrong, token based authentication services rely on cryptographic exchanges of a token, and as long as you got your secrets and keys right, you are good to go. But saying that you would almost and always prefer it over sessions because of involvement of Database and the state, is a bit of stretch.
+
+<blockquote>
+    keeping our request handlers stateless, does NOT really solve the
+    scalability problem; instead – it merely pushes it to the database.
+</blockquote>
+
+First of all, everytime you mention a stateless architecture, what you essentially mean is that you are pushing all the state and state equivalents of your application to the database layer. stateless scalability is only for the request processing or request handling layer, but not for the database layer. This is why we end up using a lot of caching layers, in memory solutions, and asynchronous queues in front of our databases.
+
+Even for the JWT fanboys, your application is not really stateless once it serves to more users than the employees of walmart (They really got over 2.1 Million users. Even their internal tools have more MAUs than lifetime user count of a modern age devtool startup), You will need to make sure your tokens are revokable, and you will need to maintain a separate token called `refresh token` to make sure you can revoke the token without the user having to login again. And guess where that token is stored? in the database.
+
+So yeah, the scalability problem is not really solved by using JWTs, You are just not dealing with it during the initial phase of your application. But you will have to deal with it, and you will have to deal with it in a way that you will have to deal with it in a session based auth.
+
+<blockquote>
+    JWT is a probably a good enough identity provider but really falls short as
+    an authorization solution.
+</blockquote>
+
+First of all, JWTs works for identity provision and authentication purposes, and you will get the resulting outcomes that you expect. However they are not really meant to do well with the intricate authorization requirements, particularly in systems with complex role-based access controls. Think of a very complicated role based access control to manage resources of your applications. Since you are trying to keep the statelessness alive of your request-response cycle, you will end up putting all the required information in the token itself as well as some metadata. Think of how bloated your token will be, and how much of a pain it will be to manage it.
+
+-   As authorization rules become more complex, the token size grows significantly, potentially causing performance issues.
+-   Updating and maintaining these large, information-rich tokens becomes increasingly difficult and error-prone.
+-   Changes to authorization rules might require reissuing tokens, which can be cumbersome in large systems.
+-   Storing extensive authorization data in client-side tokens may expose sensitive information.
+
+Even the S.O.L.I.D. and Clean Architecture bros would agree with me as we are losing to the single responsibility principle here because our identity provider also became the application logic. By attempting to cram both identity and detailed application-specific authorization logic into a single token, we're forcing the identity provider to juggle multiple responsibilities. Please don't stuff everything into your token, just because you can. Your future self and your sanity will thank you forever.
+
+#### JWT has a use case
+
+But there is one thing I really like about JWTs, and that is their life span. JWTs are great for short lived tokens, and they are great for tokens that are not really sensitive. For example, you can use JWTs for your API tokens, or for your access tokens, but you should never use them for your session tokens.
+
+I would personally use jwt for -
+
+-   Magic links, so that they will be used only once, within the timespan of their life. (usually 5 to 10 minutes), ultimately creating a session.
+-   Password/Email Verification
+-   API tokens
+
+More importantly, We are moving in a direction where web is repeating itself, We saw a whole circle of web development starting from server rendered pages in PHP to client side rendered single page applications with JS bundle bigger than your forehead, and now we are back to server side rendering with Next.js and Astro. And to those, who claim that session based auth does not fit the narrative of client side applications, the current ecosystem of web development is not really about client side applications, it's about server side rendering with client side interactivity. And session based auth fits perfectly in this narrative.
+
+##### Security Concerns with sessions
+
+session based auth is a very traditional way of handling authentication, and it has been around for a long time. The reason people had to come up with JWTs was because of the security concerns with sessions. In sessions based authentications, You don't have to add your session in every request, as once set as cookie, it will be sent with every request. This is a security concern, as if someone gets hold of your cookie, they can impersonate you (the bad old CSRF). But this is not a problem anymore as a lot of modern browsers have implemented `SameSite` or `HttpOnly` cookie attributes, which prevent CSRF attacks. And you can also use anti-CSRF tokens to prevent CSRF attacks. There are a lot of good resources online on how to prevent CSRF attacks. If dealing with Next.js, you can use [edge-csrf](https://www.google.com/search?q=edge-csrf+npm&oq=edge-csrf&sourceid=chrome&ie=UTF-8) to prevent CSRF attacks.
+
+## Auth is not hard
+
+I used to tell everyone that auth is hard and one should never roll out their own auth in their applications but to use existing auth services. But my views have changed over the course of past few months as I have progressively worked on my own auth service. It just brings me to my another take:
+
+<blockquote>
+    A lot of times, what we build in web is not hard, it's just very
+    complicated.
+</blockquote>
+
+What we build in web is not really hard. most of the things we make are very easy but tedius and time consuming. Auth is one of them. All you need is to have your requirements figured out and the basics of how auth works. You can build your own auth service in a matter of days. And you can make it as secure as you want depending on your requirements. If I can build a secure auth service, you can too. Read [The hardest part of building software is not coding, it's requirements
+](https://arc.net/l/quote/irztwrym)
+
+## Password Auth
+
+I really hate password auth. It gets too complicated over the time and it becomes a pain to manage. We think of password auth as a simple username and password, but it's not. It's a lot more than that. You have to think about password resets, password changes, password policies, password hashing, password salting, password storage, password retrieval, password security, password expiration, password recovery, password strength, password history, password rotation etc. I know those were a lot of password prefixed words but they're all real requirements.
+
+#### If you still want to use it, here are some quick tips:
+
+-   Do not use stuffs like SHA1, MD5, or any other hashing algorithms that are not considered secure anymore. Use bcrypt or argon2. Trust me on Argon2, it's the best one and most secure out there.
+-   Use [zxcvbn](https://github.com/dropbox/zxcvbn) for password strength estimation. It's a great library for password strength and it's made by Dropbox.
+-   Use simple regex for email, do not over complicate as it can lead to a ReDOS (regex based denial of service) attack.
+-   Use [haveibeenpwned api](https://haveibeenpwned.com/API/v3) to check if the password submitted by user has been in any data breaches. It's a great service and it's free.
