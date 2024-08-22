@@ -1,0 +1,496 @@
+---
+title: RIP Higher Order Components, You Were a Headache I Won't Miss
+pubDate: 2024-08-22
+description: In this blog post, I will be discussing the evolution of React patterns and how we can use the new React features to write cleaner and more maintainable code (featuring my favourite Next.js library)
+tags:
+    - typescript
+    - functional programming
+    - types
+published: true
+featured: true
+image: https://i.ibb.co/QJzRNHt/Image-from-imgsrc-1.png
+---
+
+### Need of Abstraction
+If you have worked on larger codebases, you tend to find some common patterns in your code. These patterns can be anything from fetching data from an API, handling loading states, error states, etc. That's where you decide to abstract these patterns into reusable components or functions. Abstraction can be of any form such as React Hooks, Higher Order Components, Wrapper functions, Tailwind layers/components etc.
+
+<div class="p-4 text-sm text-gray-800 mb-4 rounded-lg bg-gray-50" role="alert">
+    Abstractions are a way to reduce duplication and make your code more maintainable and readable.
+</div>
+
+
+```css
+/**
+ * Example of a Tailwind layer that can be used to abstract common styles
+ */
+@layer components {
+  .btn-blue {
+    @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded;
+  }
+}
+```
+
+I will be talking about two different approaches to abstracting out a redundant code. One is the traditional `Higher Order Components (HOC)` and the other is the newer one leveraging react's `parent-child relationship`.
+
+### What are we going to abstract out?
+
+My job is to work on complex Next.js apps and everyday I come across multiple places in the codebase where I have to write the same code again and again. I've had multiple opportunities to abstract out redundant code when we migrated our codebase from Next.js `pages` directory to `app` directory recently.
+
+One such example, parsing the query and url params that are injected into the Page component at a route level.
+
+```tsx
+// pages/blog/[slug].tsx
+const Home = ({params}: {params: string | string | string[]}) => {
+  return (
+    <div>
+      <SomeComponent params={params} />
+    </div>
+  )
+}
+
+export default Home;
+```
+
+While we get some type helpers from Next.js, but this is not enough. For example, I worked a lot on search engines implemented in Next.js and I definitely needed little more than just `params` to be passed directly to my components. I needed to create a layer of parser that would parse the query params and handle the search params in a more structured way.  This was being repeated in multiple routes in the codebase. And guess what, a perfect opportunity to abstract out the redundant code using one of the two approaches I mentioned above.
+
+I will be using two libraries to parse the query params and url params. one is `Zod` and other is `Tempeh`.
+
+- Zod is a TypeScript-first schema declaration and validation library, this will be our schema provider.
+- Tempeh is a declarative route builder for Next.js that provides a layer of schema validated type safety over the Next.js router object. That means, we get type safety at run time and compile time. Tempeh works on zod.
+- Tempeh provides helpers to get the query params and url params in a structured way in client components but we need a way to parse these params at the route level and pass as props to the children of the page.
+
+
+### Problem Statement
+
+We are going to build a marketing page for an imaginary native application from where user can download the app. The page will take a url param - `device type` such as android or ios and a query params related to tracking and analytics. - `utm_source`, `utm_campaign`, `utm_medium` etc.
+We need a way to parse these params at the route level and pass as props to the children of the page by creating a layer of abstraction.
+
+In a Next.js app, we will install our dependencies:
+```bash
+pnpm i zod@latest tempeh@4.0.3
+```
+
+This is how our Next.js app looks like
+
+```
+├── app
+|  ├── layout.tsx
+|  ├── page.tsx
+|  ├── download
+|  |  ├── [devices]
+|  |  |  ├── page.tsx
+|  |  |  ├── route.info.ts
+|  |
+├── package.json
+├── ts.config.json
+└── next.config.mjs
+└── route.config.ts
+```
+
+This is a normal Next.js app structure, except for `route.config.ts` and `route.info.ts` files. These files are used by Tempeh to define the routes and their schema. I will come to this later.
+
+### Defining our Routes
+To use tempeh, first we will instantiate a new instance of Tempeh and define our routes in `route.config.ts` file.
+
+```ts
+import { routeBuilder } from 'tempeh';
+import { z } from 'zod';
+
+// instantiate a new instance of routeBuilder
+const { createRoute } = routeBuilder.getInstance({
+  additionalBaseUrls: {
+    EXAMPLE: 'https://example.com',
+  },
+  defaultBaseUrl: '/',
+  formattedValidationErrors: true,
+});
+
+// Common Schema that will be used in the route
+// Params Schema
+export const paramsSchema = z.object({
+  device: z.enum(['mac', 'windows', 'ios', 'android']),
+});
+
+// SearchParams Schema
+export const searchParamsSchema = z.object({
+  utm_source: z
+    .enum([
+      'google',
+      'facebook',
+      'twitter',
+      'linkedin',
+      'instagram',
+      'email',
+      'newsletter',
+      'direct',
+      'referral',
+    ])
+    .default('direct'),
+
+  utm_medium: z
+    .enum([
+      'cpc',
+      'display',
+      'email',
+      'social',
+      'affiliate',
+      'referral',
+      'organic',
+    ])
+    .default('organic'),
+
+  utm_campaign: z.string().default('none'),
+
+  utm_term: z.string().optional(),
+
+  utm_content: z
+    .enum(['textlink', 'image', 'button', 'video', 'popup'])
+    .optional(),
+
+  campaign_id: z.string().uuid().optional(),
+
+  click_timestamp: z.date().default(() => new Date()),
+});
+```
+
+- We have initialized a new instance of routeBuilder and defined our routes. This is a singleton instance and you can use it anywhere in your app. It takes certain options but all of them are optional and out of scope for this article.
+- We have also defined two schemas - `paramsSchema` and `searchParamsSchema` that will be used in our routes.
+
+Now in the `route.info.ts` file, we will define our routes. We will use defined schemas for the validation layer for our routes.
+
+```ts
+import createRoute, { paramsSchema, searchParamsSchema } from '@/route.config';
+
+const DownloadPageRoute = createRoute({
+  name: 'download-page',
+  fn: ({ device }) => `download/${device}`,
+  searchParamsSchema: searchParamsSchema,
+  paramsSchema: paramsSchema,
+});
+
+export default DownloadPageRoute;
+```
+
+### First Approach - Higher Order Components (HOC)
+
+It is a very legacy way of abstracting out the redundant code. It is a pattern that is used in React to reuse component logic. It is a function that takes a component and returns a new component with some additional props. This is a very rare pattern these days as React hooks introduced better ways to reuse component logic. Honestly, if you are someone who is still using HOCs, You love the pain, don't you?
+
+We are probably not going to use this approach in newer codebase but most of us have to work on legacy codebases where HOCs are still being used. So this guide will help you understand how to use HOCs to abstract out the redundant code, especially in Typescript.
+
+- HOCs are named with a prefix `with` followed by the noun for the logic you are encapsulating. for example, to add logging to a component, you might create a `withLogging` HOC.
+- HOCs are of two concerns - enhancements and enjections, Enhancements are the HOCs that add no new props to the component, they just enhance the existing component such as logging or loading. Enjections are the HOCs that add new props to the component (our use case.
+- HOCs follow currying. If you call your piece of function HOC without following the currying pattern, those functional bros are gonna haunt you in your dreams. If you don't know what currying is - it is a technique of evaluating function with multiple arguments into a sequence of functions with a single argument. Basically you pass one argument at a time to the function and it returns a new function that expects the next argument.
+
+
+Let's create a HOC that will parse the query params and url params and pass them as props to the children of the page.
+
+```tsx
+// lib/hoc.tsx
+import { type ComponentType } from 'react';
+import { RouteConfig } from 'tempeh';
+import { ZodSchema } from 'zod';
+
+// type of the props that will be injected by the HOC
+// received from the page.
+export type RouteProps = {
+  params: unknown;
+  searchParams: unknown;
+};
+
+export const withTypedParams =
+  <TParams extends ZodSchema, TSearchParams extends ZodSchema>(
+    routeInfo: RouteConfig<TParams, TSearchParams>
+  ) =>
+  ({ params, searchParams }: RouteProps) =>
+  <TProps extends object>(
+    MyComponent: React.ComponentType<
+      TProps & {
+        parsedParams: typeof routeInfo.params;
+        parsedSearchParams: typeof routeInfo.searchParams;
+      }
+    >
+  ) => {
+    const parsed = routeInfo.parseParams(params);
+    const parsedSearchParams = routeInfo.parseSearchParams(searchParams);
+
+    const ComponentWithParsedInfo: ComponentType<TProps> = (rest: TProps) => {
+      return (
+        <MyComponent
+          {...rest}
+          parsedSearchParams={parsedSearchParams}
+          parsedParams={parsed}
+        />
+      );
+    };
+
+    ComponentWithParsedInfo.displayName = `withTypedRoutes(${
+      MyComponent.displayName || MyComponent.name || 'Component'
+    })`;
+
+    return ComponentWithParsedInfo;
+  };
+
+```
+
+Let's break down the code:
+- At first, we take routeInfo as an argument which is the route configuration object that we defined in `route.info.ts` file. It takes two generic arguments - TParams and TSearchParams which are the types of the params and searchParams respectively.
+- We return a function that takes an object with params and searchParams as arguments.These are the values that we will parse with `routeInfo` and then enject into to the Component.
+- Next argument to the function is the component that we want to enject the parsed values into. It takes a generic argument TProps which is the type of the props that the component is expecting. We extend the props of the component with two new props - `parsedParams` and `parsedSearchParams` which are the parsed values of the params and searchParams.
+- Finally we return a new component that takes the rest of the props and passes them to the original component along with the parsed values of the params and searchParams.
+
+
+We have a created a chain of functions that takes the route configuration object, parses the params and searchParams and enjects them into the component. This is a very powerful pattern and can be used to abstract out the redundant code in your application.
+
+While working with HOCs, do not forget to use `displayName` property of the component. Otherwise it will be a hell for you to debug the component tree in the React DevTools.
+
+### Using our HOC
+
+```tsx
+import { RouteProps, withTypedParams } from '@/lib/hoc';
+import DownloadPageRouteInfo from './route.info';
+
+export default function Page({ params, searchParams }: RouteProps) {
+  return withTypedParams(DownloadPageRouteInfo)({ params, searchParams })(
+    ({ parsedParams, parsedSearchParams }) => {
+      return (
+        <div>
+          <main className="flex min-h-screen flex-col items-center justify-between p-24">
+            <h1 className="text-4xl">Download Page HOC</h1>
+            <div className="py-12">
+              <h2 className="text-2xl">Params</h2>
+              <pre>{JSON.stringify(parsedParams, null, 2)}</pre>
+            </div>
+            <div className="py-12">
+              <h2 className="text-2xl">Search Params</h2>
+              <pre>{JSON.stringify(parsedSearchParams, null, 2)}</pre>
+            </div>
+            <pre></pre>
+          </main>
+        </div>
+      );
+    }
+  )({});
+}
+```
+
+We have used our HOC to parse the params and searchParams and enject them into the component.
+- We have passed the route configuration object to the HOC.
+- We have passed the params and searchParams to the HOC.
+- We have passed the component to the HOC.
+- We have passed the rest of the props to the component. (empty object in this case)\
+
+
+Now the component is free from the parsing logic and we can reuse the HOC in other page routes as well. All we need is to change the route configuration object that we pass to the HOC and pass the params and searchParams to the HOC. We also get full type safety with Typescript -
+
+import { Image } from "astro:assets";
+
+<Image
+    src="/type-safety.png"
+    title={"type safe params with tempeh"}
+    alt={"type safe params with tempeh"}
+    width={800}
+    height={800}
+    className="mx-auto"
+/>
+
+### Problems with HOCs
+- We need to add the displayName property to the component to make it easier to debug in the React DevTools.
+- HOCs can be hard to debug and understand. They can make the codebase harder to understand.
+- Typescript interfaces can be hard to manage with HOCs. Someone with less experience with Typescript can find it hard to understand the types of the props that are being passed to the component.
+- Someone who does not like functional programming can not like HOCs. They can be hard to understand for someone who is not familiar with functional programming concepts such as currying and composition.
+
+Luckily, they are outdated. They were like the coolest thing in the React world a few years ago but now we have better alternatives like hooks and render props.
+
+### The Owner component pattern
+
+You may wonder, scratch your head and ask yourself - "What is the owner component pattern?". And it's funny. See, The react is all about that parent-child relationship. except for sometimes, it's not. There is one more type of component family that is called `owner` components.
+
+Owner Components are wrappers that are responsible for managing the state and behavior of the children components. They are the ones that are responsible for the data fetching, state management, and other side effects. In simpler terms, if your parent component can pass the props to the child component, then that parent component owns the child component. This is very crucial in understanding the modern RSC (React State Component) world of React where ContextProviders that accepts children can take server compoents as children.
+
+- Owner components are responsible for managing the state and behavior of the children components.
+- When owner component rerenders, all the children components rerender as well.
+- Context Providers in RSC are parent components that accept children components as props but do not enject any props into the children components. They are owner components. That's why Server Components can be children of Context Providers that are client components.
+
+We will use the owner component pattern to refactor our HOC to create abstraction.
+
+```tsx
+// @lib/safe-params-layout.tsx
+import { RouteConfig } from 'tempeh';
+import { ZodSchema } from 'zod';
+
+export const SafeParamsLayout = <T extends ZodSchema, U extends ZodSchema>({
+  routeInfo,
+  children,
+  searchParams,
+  params,
+}: {
+  routeInfo: RouteConfig<T, U>;
+  children: (props: {
+    parsedParams: RouteConfig<T, U>['params'];
+    parsedSearchParams: RouteConfig<T, U>['searchParams'];
+  }) => JSX.Element | Promise<JSX.Element>;
+  searchParams?: unknown;
+  params: unknown;
+}) => {
+  const parsedParams = routeInfo.parseParams(params);
+  const parsedSearchParams = routeInfo.parseSearchParams(searchParams);
+
+  return children({
+    parsedParams,
+    parsedSearchParams,
+  });
+};
+```
+
+I have named this file `safe-params-layout.tsx` because honestly, I could not come up with a better name. But since it is kind of a wrapper, I have named it layout. You can name it whatever you want. There is no official name for this pattern unlike the HOCs.
+
+- We have created a new component called `SafeParamsLayout` that takes the route configuration object, children, searchParams, and params as props.
+- Here, we have defined the type of params and searchParams as unknown. This is because we do not know the type of the params and searchParams that the component is expecting. We will pass the parsed values of the params and searchParams to the children component.
+- the parsed values of the params and searchParams are derived using the `parseParams` and `parseSearchParams` functions of the route configuration object. These functions will validate the values against the schema and if the values are valid, they will return the parsed values. Otherwise, they will throw an error. (You can make it safer by passing the second argument to `parseParams` and `parseSearchParams` as true. It will give a discriminated union of the error and the parsed value. You can then check if the value is an error or not and then throw an error or return the parsed value. Again, out of the scope of this article.)
+- Notice, instead of using the JSX syntax, we are using the function syntax to render the children component. This is because we want to pass the parsed values of the params and searchParams to the children component. This way we are no longer concering with what the children component is doing with the parsed values. We are just passing the parsed values to the children component.
+
+### Using the SafeParamsLayout component
+
+```tsx
+import { RouteProps } from '@/lib/hoc';
+import DownloadPageRouteInfo from './route.info';
+import { SafeParamsLayout } from '@/lib/safe-params-layout';
+
+export default function Page({ params, searchParams }: RouteProps) {
+  return (
+    <SafeParamsLayout
+      routeInfo={DownloadPageRouteInfo}
+      searchParams={searchParams}
+      params={params}
+    >
+      {({ parsedSearchParams, parsedParams }) => {
+        return (
+          <div>
+            <main className="flex min-h-screen flex-col items-center justify-between p-24">
+              <h1 className="text-4xl">Download Page HOC</h1>
+              <div className="py-12">
+                <h2 className="text-2xl">Params</h2>
+                <pre>{JSON.stringify(parsedParams, null, 2)}</pre>
+              </div>
+              <div className="py-12">
+                <h2 className="text-2xl">Search Params</h2>
+                <pre>{JSON.stringify(parsedSearchParams, null, 2)}</pre>
+              </div>
+              <pre></pre>
+            </main>
+          </div>
+        );
+      }}
+    </SafeParamsLayout>
+  );
+}
+```
+
+This syntax is much cleaner and easier to understand. We are no longer concerned with the implementation details of the children component. We are just passing the parsed values of the params and searchParams to the children component. This makes the code much easier to understand and maintain.
+
+- We are using the `SafeParamsLayout` component to wrap the children component. We are passing the route configuration object, searchParams, and params as props to the `SafeParamsLayout` component.
+- We are using the function syntax to render the children component. We are passing the parsed values of the params and searchParams to the children component. This way we are no longer concerned with what the children component is doing with the parsed values. We are just passing the parsed values to the children component.
+
+## In defense of Duplication
+While these solutions are great, you are not going to know when to use them unless you understand the problem. People often try to create abstractions before knowing the exact requirements. This leads to a lot of unnecessary complexity, unmaintainable architecture. This is also known as premature abstraction and you may as well know - `premature abstraction is the root of all evil`.
+
+Duplication stands for the idea of writing the same code in multiple places. In software engineering, we have this notion of DRY (Don't Repeat Yourself) which is a principle of software development aimed at reducing repetition of software patterns, replacing it with abstractions or using data normalization to avoid redundancy. However, It is also misunderstood a lot.
+
+For example, Look at this code below, we have created a complex function that gets a coupon code for a user based on user details -
+
+```js
+
+/**
+ * Retrieves and aggregates user details based on provided information,
+ * and validates a coupon code using an external API.
+ *
+ * The function performs the following steps:
+ *
+ * 1. Calculates the user's age from the provided birthdate:
+ *    - Gets the current date.
+ *    - Converts the birthdate string into a Date object.
+ *    - Computes the initial age by subtracting the birth year from the current year.
+ *    - Adjusts the age if the birthday hasn't occurred yet in the current year.
+ *
+ * 2. Creates a location data object:
+ *    - Uses the provided latitude and longitude.
+ *    - Adds the current timestamp in ISO format.
+ *
+ * 3. Validates the provided coupon code using an external API:
+ *    - Makes an API request to validate the coupon code.
+ *    - Returns the result of the coupon validation.
+ *
+ * 4. Aggregates and returns user details along with coupon information:
+ *    - Combines userId, birthdate, calculated age, location data, and coupon validation result into a single object.
+ * @example
+ * getUserDetails('12345', '1990-06-15', 37.7749, -122.4194, 'DISCOUNT2024')
+ *   .then(userDetails => console.log(userDetails))
+ *   .catch(error => console.error(error));
+ */
+
+
+async function getUserDetails(userId, birthdate, latitude, longitude, couponCode) {
+    /**
+     * Calculates the age based on the provided birthdate.
+     *
+     * @param {string} birthdate - The birthdate of the user in YYYY-MM-DD format.
+     * @returns {number} The calculated age of the user.
+     */
+    function calculateAge(birthdate) {
+        const today = new Date();
+        const birthDate = new Date(birthdate);
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        const monthDifference = today.getMonth() - birthDate.getMonth();
+
+        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    }
+
+    // Step 1
+    const age = calculateAge(birthdate);
+
+    // Step 2
+    const location = {
+        latitude,
+        longitude,
+        timestamp: new Date().toISOString()
+    };
+
+    // Step 3
+    let coupon = { isValid: false, message: 'Coupon code not validated' };
+    try {
+        const response = await fetch('https://api.example.com/validate-coupon', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ couponCode })
+        });
+        const data = await response.json();
+        coupon = {
+            isValid: data.isValid,
+            message: data.message
+        };
+    } catch (error) {
+        console.error('Error validating coupon code:', error);
+    }
+
+    // Step 4
+    return {
+        userId,
+        birthdate,
+        age,
+        location,
+        coupon
+    };
+}
+```
+
+Now this may seem like a good normal function that takes care of everything related to coupon code. But it is not DRY. it is not DRY because of the code, the code is fine. It is because of the comments. We have created two sources of truth, the code and the comments. This is a classic example of duplication. The comments are duplicating the code. So anytime, you change the code, you have to change the comments as well. If you forget to do so, the comments will become outdated and misleading. This is how it breaks the DRY principle.
+
+So, the next time you see duplication, don't just blindly refactor it. Understand the problem first. You may not know the requirements yet. You may not know the exact problem yet. So, don't try to create abstractions before knowing the exact requirements.
+However when you are 100% sure, you can use one of the above solutions to remove duplication and make your React code more maintainable and easier to understand.

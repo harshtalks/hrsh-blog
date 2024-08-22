@@ -2,7 +2,7 @@
 title: This is how I manage my routes in Next.js (and It's type safe too) 🚀🚀🚀
 pubDate: 2024-05-04
 description: I recently discovered a new way to manage my routes in Next.js using zod and it turned out to be more effective than I thought. I'm going to show you how I did it.
-featured: true
+featured: false
 published: true
 tags:
     - Typescript
@@ -24,15 +24,15 @@ const nextConfig = {
     typedRoutes: true,
   },
 }
- 
+
 module.exports = nextConfig
-``` 
+```
 
 But there are few problem with this solution:
 - you can only get the intelisense over the path itself, for example it will be able to tell you that your href in Link tag is not correct but it wont give you any details about the query params or the route params.
 - you can't be sure of the schema of the query params or the route params for each route. There's always a chance that you may pass the wrong type of query params or route params to the route.
 
-For example, this is how Next.js include the usage of this feature in their docs: 
+For example, this is how Next.js include the usage of this feature in their docs:
 
 ```tsx
 // No TypeScript errors if href is a valid route
@@ -40,7 +40,7 @@ For example, this is how Next.js include the usage of this feature in their docs
 <Link href="/blog/nextjs" />
 <Link href={`/blog/${slug}`} />
 <Link href={('/blog' + slug) as Route} />
- 
+
 // TypeScript errors if href is not a valid route
 <Link href="/aboot" />
 ```
@@ -48,7 +48,7 @@ For example, this is how Next.js include the usage of this feature in their docs
 ```tsx
 import type { Route } from 'next'
 import Link from 'next/link'
- 
+
 function Card<T extends string>({ href }: { href: Route<T> | URL }) {
   return (
     <Link href={href}>
@@ -75,7 +75,7 @@ First, we are in a next.js project, so we need to install the following packages
 pnpm add zod tempeh
 ```
 
-I have used pnpm here, you can use npm or yarn or bun as well. 
+I have used pnpm here, you can use npm or yarn or bun as well.
 
 <strong>Tempeh</strong> is the library to provide us with utilities to manage our routes and zod will be the schema provider here. (More about tempeh in few moments)
 
@@ -86,8 +86,8 @@ Here's how my file structure looks like:
 
 ```
 ├── app
-|  ├── layout.tsx   
-|  ├── page.tsx     
+|  ├── layout.tsx
+|  ├── page.tsx
 |  ├── posts
 |  |  ├── [userId]
 |  |  |  ├── page.tsx
@@ -102,7 +102,7 @@ Here's how my file structure looks like:
 As you can seem, we are in a typical next.js project, with a `posts` directory which has a dynamic route `[userId]` and a `route.info.ts` file in it. The `route.info.ts` file will contain the schema for the route and the query params and route params for the route.
 
 
-At root level we have a file named `route.config.ts` which will contain the singleton instance of the route builder: 
+At root level we have a file named `route.config.ts` which will contain the singleton instance of the route builder:
 
 ```ts
 import { routeBuilder } from "tempeh";
@@ -128,14 +128,14 @@ By default, the base url for the routes is `/`, but you can provide additional b
 the `posts/[userId]/page.tsx` is a page in our app that contains posts for a user with given userId. Now this page will also take some filters as query params, and we want to make sure that the filters are of the correct type. What we essentially want is this:
 
 ```md
-Params: 
+Params:
 - userId: string
 
-SearchParams: 
+SearchParams:
 - limit: number
 - sortBy: 'asc' | 'desc'
 - query: string
-``` 
+```
 
 ```ts
 // posts/[userId]/route.info.ts
@@ -167,7 +167,7 @@ export default UserPostsRoute;
 
 You can read more about how tempeh works in the [official docs](https://tempeh-docs.vercel.app/)
 
-Here: 
+Here:
 - We have created a `paramSchema` which is a zod schema for the route params for the route
 - We have created a `searchParamSchema` which is a zod schema for the query params for the route
 - We have created a `UserPostsRoute` which is a route config for the route. It contains the name of the route, the function to generate the href for the route, the schema for the route params and the schema for the query params. The name of the route is important as it will be used under the hood to keep track of all the routes and you will not be able to create two routes with the same name.
@@ -202,8 +202,3 @@ You will get intellisense for the params and searchParams for the route. If you 
 
 - [Tempeh Docs](https://tempeh-docs.vercel.app/)
 - [Tempeh github](https://github.com/harshtalks/tempeh)
-
-
-
-    
-
