@@ -420,94 +420,51 @@ For example, Look at this code below, we have created a complex function that ge
 
 ```js
 
-/**
- * Retrieves and aggregates user details based on provided information,
- * and validates a coupon code using an external API.
- *
- * The function performs the following steps:
- *
- * 1. Calculates the user's age from the provided birthdate:
- *    - Gets the current date.
- *    - Converts the birthdate string into a Date object.
- *    - Computes the initial age by subtracting the birth year from the current year.
- *    - Adjusts the age if the birthday hasn't occurred yet in the current year.
- *
- * 2. Creates a location data object:
- *    - Uses the provided latitude and longitude.
- *    - Adds the current timestamp in ISO format.
- *
- * 3. Validates the provided coupon code using an external API:
- *    - Makes an API request to validate the coupon code.
- *    - Returns the result of the coupon validation.
- *
- * 4. Aggregates and returns user details along with coupon information:
- *    - Combines userId, birthdate, calculated age, location data, and coupon validation result into a single object.
- * @example
- * getUserDetails('12345', '1990-06-15', 37.7749, -122.4194, 'DISCOUNT2024')
- *   .then(userDetails => console.log(userDetails))
- *   .catch(error => console.error(error));
- */
+// Step 1: Define user parameters
+// - We assume the user has properties like id, purchaseHistory, and loyaltyPoints
+
+// Step 2: Determine user eligibility
+// - Check if the user has made at least 3 purchases in the last 30 days
+// - Verify if the user has more than 100 loyalty points
+
+// Step 3: Generate base coupon code
+// - Create a random string of 8 characters (letters and numbers)
+
+// Step 4: Calculate discount percentage
+// - Start with a base discount of 5%
+// - Add 1% for every 50 loyalty points (up to a maximum of 5% additional)
+// - Add 2% if the user has made more than 5 purchases in the last 30 days
+
+// Step 5: Determine coupon expiration
+// - Set expiration date to 14 days from current date
+
+// Step 6: Create final coupon object
+// - Combine coupon code, discount percentage, and expiration date
+
+// Step 7: Store coupon in database
+// - Save the coupon object associated with the user's ID
+
+// Step 8: Return coupon to user
+// - Send back the coupon code and relevant information
 
 
-async function getUserDetails(userId, birthdate, latitude, longitude, couponCode) {
-    /**
-     * Calculates the age based on the provided birthdate.
-     *
-     * @param {string} birthdate - The birthdate of the user in YYYY-MM-DD format.
-     * @returns {number} The calculated age of the user.
-     */
-    function calculateAge(birthdate) {
-        const today = new Date();
-        const birthDate = new Date(birthdate);
+ async function getCouponForUser(userId) {
+   const user = getUserById(userId);
 
-        let age = today.getFullYear() - birthDate.getFullYear();
+   if (isEligibleForCoupon(user)) {
+     const baseCode = generateRandomCode();
+     const discountPercentage = calculateDiscount(user);
+     const expirationDate = calculateExpirationDate();
 
-        const monthDifference = today.getMonth() - birthDate.getMonth();
+     const coupon = createCouponObject(baseCode, discountPercentage, expirationDate);
 
-        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        return age;
-    }
+     storeCouponInDatabase(userId, coupon);
 
-    // Step 1
-    const age = calculateAge(birthdate);
-
-    // Step 2
-    const location = {
-        latitude,
-        longitude,
-        timestamp: new Date().toISOString()
-    };
-
-    // Step 3
-    let coupon = { isValid: false, message: 'Coupon code not validated' };
-    try {
-        const response = await fetch('https://api.example.com/validate-coupon', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ couponCode })
-        });
-        const data = await response.json();
-        coupon = {
-            isValid: data.isValid,
-            message: data.message
-        };
-    } catch (error) {
-        console.error('Error validating coupon code:', error);
-    }
-
-    // Step 4
-    return {
-        userId,
-        birthdate,
-        age,
-        location,
-        coupon
-    };
-}
+     return coupon.code;
+   } else {
+     return null;
+   }
+ }
 ```
 
 This function might seem like a solid approach to handling coupon codes, but it doesn't follow the DRY (Don't Repeat Yourself) principle. The real issue isn’t with the code but with the comments. By having both code and comments as separate sources of information, we create redundancy. This is a classic case of "code smell," a term from Clean Code practices.
