@@ -6,13 +6,35 @@ tags:
     - typescript
     - functional programming
     - types
+    - react
 published: true
 featured: true
 image: https://i.ibb.co/QJzRNHt/Image-from-imgsrc-1.png
 ---
 
+<span
+  class="inline-flex items-center justify-center rounded-full border border-red-500 px-2.5 py-0.5 text-red-700"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="1.5"
+    stroke="currentColor"
+    class="-ms-1 me-1.5 size-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+    />
+  </svg>
+
+  <p class="whitespace-nowrap text-sm">Requires understanding of Typescript generics</p>
+</span>
+
 ### Need of Abstraction
-If you have worked on larger codebases, you tend to find some common patterns in your code. These patterns can be anything from fetching data from an API, handling loading states, error states, etc. That's where you decide to abstract these patterns into reusable components or functions. Abstraction can be of any form such as React Hooks, Higher Order Components, Wrapper functions, Tailwind layers/components etc.
+If you have worked on larger codebases, you tend to find some common patterns in your code. These patterns can be anything from fetching data from an API, handling loading states, error states, injecting props, etc. That's where you decide to abstract these patterns into reusable components or functions. Abstraction can be of any form such as React Hooks, Higher Order Components, Wrapper functions, Tailwind layers/components etc.
 
 <div class="p-4 text-sm text-gray-800 mb-4 rounded-lg bg-gray-50" role="alert">
     Abstractions are a way to reduce duplication and make your code more maintainable and readable.
@@ -30,13 +52,13 @@ If you have worked on larger codebases, you tend to find some common patterns in
 }
 ```
 
-I will be talking about two different approaches to abstracting out a redundant code. One is the traditional `Higher Order Components (HOC)` and the other is the newer one leveraging react's `parent-child relationship`.
+I will be talking about two different approaches to abstracting out a redundant code. One is the traditional `Higher Order Components (HOC)` and the other is the newer one leveraging react's `owner-child component relationship`.
 
 ### What are we going to abstract out?
 
-My job is to work on complex Next.js apps and everyday I come across multiple places in the codebase where I have to write the same code again and again. I've had multiple opportunities to abstract out redundant code when we migrated our codebase from Next.js `pages` directory to `app` directory recently.
+At my job, I deal with complex Next.js applications, and I frequently encounter situations where I need to write the same code repeatedly. During multiple migrations from the pages directory to the app directory in Next.js, I had several chances to refactor and abstract out redundant code.
 
-One such example, parsing the query and url params that are injected into the Page component at a route level.
+One such example, parsing the query and url params that are injected into the Page component at a route level to make UI decisions before rendering anything.
 
 ```tsx
 // pages/blog/[slug].tsx
@@ -51,13 +73,15 @@ const Home = ({params}: {params: string | string | string[]}) => {
 export default Home;
 ```
 
-While we get some type helpers from Next.js, but this is not enough. For example, I worked a lot on search engines implemented in Next.js and I definitely needed little more than just `params` to be passed directly to my components. I needed to create a layer of parser that would parse the query params and handle the search params in a more structured way.  This was being repeated in multiple routes in the codebase. And guess what, a perfect opportunity to abstract out the redundant code using one of the two approaches I mentioned above.
+While Next.js offers some type helpers, they are often insufficient for more complex needs. For instance, in my work with building search engines related to intellectual properties within Next.js, I found that simply passing params to components wasn’t enough. I needed to develop a parser layer to handle and structure query parameters more effectively. This was crucial because decisions about the UI—such as displaying trademark or copyright information specific to a country—often hinge on these parameters. This pattern of redundancy appeared across multiple routes in the codebase, making it an ideal candidate for abstraction. By applying one of the approaches I mentioned earlier, I could eliminate the repeated code and improve the overall maintainability of the application.
+
+This may seem like overkill to most of you, but believe me, it solved a lot of intricate issues and streamlined the functionality in ways we wouldn't expect. It took us a considerable amount of time to reach the decision to refactor our codebase to adopt and embrace this solution. This particular example is not important, the approach to tackle this problem is what I have written this blog post about.
 
 I will be using two libraries to parse the query params and url params. one is `Zod` and other is `Tempeh`.
 
 - Zod is a TypeScript-first schema declaration and validation library, this will be our schema provider.
-- Tempeh is a declarative route builder for Next.js that provides a layer of schema validated type safety over the Next.js router object. That means, we get type safety at run time and compile time. Tempeh works on zod.
-- Tempeh provides helpers to get the query params and url params in a structured way in client components but we need a way to parse these params at the route level and pass as props to the children of the page.
+- Tempeh is a declarative route builder for Next.js that integrates with Zod. It provides schema-validated type safety for the Next.js router object, ensuring type safety both at runtime and compile time.
+- Tempeh provides helpers to get the query params and url params in a structured way in client components but we need a way to parse these params at the route level and pass as props to the children of the page that are server components - that is what our generic abstracted component is going to do.
 
 
 ### Problem Statement
@@ -113,44 +137,15 @@ export const paramsSchema = z.object({
 
 // SearchParams Schema
 export const searchParamsSchema = z.object({
-  utm_source: z
-    .enum([
-      'google',
-      'facebook',
-      'twitter',
-      'linkedin',
-      'instagram',
-      'email',
-      'newsletter',
-      'direct',
-      'referral',
-    ])
-    .default('direct'),
-
-  utm_medium: z
-    .enum([
-      'cpc',
-      'display',
-      'email',
-      'social',
-      'affiliate',
-      'referral',
-      'organic',
-    ])
-    .default('organic'),
-
+  utm_source: z.string().default('direct'),
+  utm_medium: z.string().default('organic'),
   utm_campaign: z.string().default('none'),
-
   utm_term: z.string().optional(),
-
-  utm_content: z
-    .enum(['textlink', 'image', 'button', 'video', 'popup'])
-    .optional(),
-
+  utm_content: z.string().optional(),
   campaign_id: z.string().uuid().optional(),
-
   click_timestamp: z.date().default(() => new Date()),
 });
+
 ```
 
 - We have initialized a new instance of routeBuilder and defined our routes. This is a singleton instance and you can use it anywhere in your app. It takes certain options but all of them are optional and out of scope for this article.
@@ -178,8 +173,8 @@ It is a very legacy way of abstracting out the redundant code. It is a pattern t
 We are probably not going to use this approach in newer codebase but most of us have to work on legacy codebases where HOCs are still being used. So this guide will help you understand how to use HOCs to abstract out the redundant code, especially in Typescript.
 
 - HOCs are named with a prefix `with` followed by the noun for the logic you are encapsulating. for example, to add logging to a component, you might create a `withLogging` HOC.
-- HOCs are of two concerns - enhancements and enjections, Enhancements are the HOCs that add no new props to the component, they just enhance the existing component such as logging or loading. Enjections are the HOCs that add new props to the component (our use case.
-- HOCs follow currying. If you call your piece of function HOC without following the currying pattern, those functional bros are gonna haunt you in your dreams. If you don't know what currying is - it is a technique of evaluating function with multiple arguments into a sequence of functions with a single argument. Basically you pass one argument at a time to the function and it returns a new function that expects the next argument.
+- HOCs are of two concerns - enhancements and injections, Enhancements are the HOCs that add no new props to the component, they just enhance the existing component such as logging or loading. Injections are the HOCs that add new props to the component (our use case.
+- HOCs follow currying. If you call your piece of function HOC without following the currying pattern, those functional bros are gonna haunt you in your dreams. For those unfamiliar with currying, it’s a technique that transforms a function with multiple arguments into a sequence of functions, each taking a single argument. Essentially, you pass one argument at a time to the function, and it returns a new function that expects the next argument.
 
 
 Let's create a HOC that will parse the query params and url params and pass them as props to the children of the page.
@@ -229,19 +224,17 @@ export const withTypedParams =
 
     return ComponentWithParsedInfo;
   };
-
 ```
 
 Let's break down the code:
 - At first, we take routeInfo as an argument which is the route configuration object that we defined in `route.info.ts` file. It takes two generic arguments - TParams and TSearchParams which are the types of the params and searchParams respectively.
-- We return a function that takes an object with params and searchParams as arguments.These are the values that we will parse with `routeInfo` and then enject into to the Component.
-- Next argument to the function is the component that we want to enject the parsed values into. It takes a generic argument TProps which is the type of the props that the component is expecting. We extend the props of the component with two new props - `parsedParams` and `parsedSearchParams` which are the parsed values of the params and searchParams.
+- We return a function that takes an object with params and searchParams as arguments.These are the values that we will parse with `routeInfo` and then inject into to the Component.
+- Next argument to the function is the component that we want to inject the parsed values into. It takes a generic argument TProps which is the type of the props that the component is expecting. We extend the props of the component with two new props - `parsedParams` and `parsedSearchParams` which are the parsed values of the params and searchParams.
 - Finally we return a new component that takes the rest of the props and passes them to the original component along with the parsed values of the params and searchParams.
 
+We have a created a chain of functions that takes the route configuration object, parses the params and searchParams and injects them into the component. This is a very powerful pattern and can be used to abstract out the redundant code in your application.
 
-We have a created a chain of functions that takes the route configuration object, parses the params and searchParams and enjects them into the component. This is a very powerful pattern and can be used to abstract out the redundant code in your application.
-
-While working with HOCs, do not forget to use `displayName` property of the component. Otherwise it will be a hell for you to debug the component tree in the React DevTools.
+While working with HOCs, do not forget to use `displayName` property of the component.Forgetting this can turn debugging your component tree in React DevTools into a nightmarish ordeal.
 
 ### Using our HOC
 
@@ -264,7 +257,6 @@ export default function Page({ params, searchParams }: RouteProps) {
               <h2 className="text-2xl">Search Params</h2>
               <pre>{JSON.stringify(parsedSearchParams, null, 2)}</pre>
             </div>
-            <pre></pre>
           </main>
         </div>
       );
@@ -273,12 +265,11 @@ export default function Page({ params, searchParams }: RouteProps) {
 }
 ```
 
-We have used our HOC to parse the params and searchParams and enject them into the component.
-- We have passed the route configuration object to the HOC.
-- We have passed the params and searchParams to the HOC.
-- We have passed the component to the HOC.
-- We have passed the rest of the props to the component. (empty object in this case)\
-
+We have used our HOC to parse the params and searchParams and inject them into the component. And one by one -
+- we have passed the route configuration object to the HOC.
+- we have passed the params and searchParams to the HOC.
+- we have passed the component to the HOC.
+- we have passed the rest of the props to the component. (empty object in this case)
 
 Now the component is free from the parsing logic and we can reuse the HOC in other page routes as well. All we need is to change the route configuration object that we pass to the HOC and pass the params and searchParams to the HOC. We also get full type safety with Typescript -
 
@@ -299,7 +290,7 @@ import { Image } from "astro:assets";
 - Typescript interfaces can be hard to manage with HOCs. Someone with less experience with Typescript can find it hard to understand the types of the props that are being passed to the component.
 - Someone who does not like functional programming can not like HOCs. They can be hard to understand for someone who is not familiar with functional programming concepts such as currying and composition.
 
-Luckily, they are outdated. They were like the coolest thing in the React world a few years ago but now we have better alternatives like hooks and render props.
+Luckily, they are outdated. They were like the coolest thing in the React world a few years ago but now we have better alternatives like hooks and owner components.
 
 ### The Owner component pattern
 
@@ -311,7 +302,37 @@ Owner Components are wrappers that are responsible for managing the state and be
 - When owner component rerenders, all the children components rerender as well.
 - Context Providers in RSC are parent components that accept children components as props but do not enject any props into the children components. They are owner components. That's why Server Components can be children of Context Providers that are client components.
 
-We will use the owner component pattern to refactor our HOC to create abstraction.
+Example of a owner component:
+```tsx
+import React, { useState, useEffect } from 'react';
+import SomeComponent from './SomeComponent';
+
+const Counter = () => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCount(prevCount => prevCount + 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <div>
+      <SomeComponent count={count} />
+      <h1>Counter: {count}</h1>
+    </div>
+  );
+};
+
+```
+
+Everytime, the count changes, it will rerender the `Counter` component, and because of that, all its children will also get rerendered. The `Counter` owns a logic and they can pass this state directly to the `SomeComponent`, thus making this relationship a `Owner-Child Relationship`
+
+We will use the owner component pattern to refactor our HOC to create abstraction. Unlike a parent component, we want to inject parsed params and searchParams directly to the children of the component.
+
+### Our Beautiful and Generic Owner Component
 
 ```tsx
 // @lib/safe-params-layout.tsx
@@ -376,7 +397,6 @@ export default function Page({ params, searchParams }: RouteProps) {
                 <h2 className="text-2xl">Search Params</h2>
                 <pre>{JSON.stringify(parsedSearchParams, null, 2)}</pre>
               </div>
-              <pre></pre>
             </main>
           </div>
         );
@@ -391,7 +411,7 @@ This syntax is much cleaner and easier to understand. We are no longer concerned
 - We are using the `SafeParamsLayout` component to wrap the children component. We are passing the route configuration object, searchParams, and params as props to the `SafeParamsLayout` component.
 - We are using the function syntax to render the children component. We are passing the parsed values of the params and searchParams to the children component. This way we are no longer concerned with what the children component is doing with the parsed values. We are just passing the parsed values to the children component.
 
-## Make sure you know what you are doing.
+### Avoid Premature Reusability
 While these solutions are great, you are not going to know when to use them unless you understand the problem. People often try to create abstractions before knowing the exact requirements. This leads to a lot of unnecessary complexity, unmaintainable architecture. This is also known as premature abstraction and you may as well know - `premature abstraction is the root of all evil`.
 
 Duplication stands for the idea of writing the same code in multiple places. In software engineering, we have this notion of DRY (Don't Repeat Yourself) which is a principle of software development aimed at reducing repetition of software patterns, replacing it with abstractions or using data normalization to avoid redundancy. However, It is also misunderstood a lot.
@@ -490,12 +510,16 @@ async function getUserDetails(userId, birthdate, latitude, longitude, couponCode
 }
 ```
 
-Now this may seem like a good normal function that takes care of everything related to coupon code. But it is not DRY. it is not DRY because of the code, the code is fine. It is because of the comments. We have created two sources of truth, the code and the comments. This is a classic example of duplication and is often termed as code smell (Clean Code 101). Anytime, you change the code, you have to change the comments as well. If you forget to do so, the comments will become outdated and misleading. This is how it breaks the DRY principle.
+This function might seem like a solid approach to handling coupon codes, but it doesn't follow the DRY (Don't Repeat Yourself) principle. The real issue isn’t with the code but with the comments. By having both code and comments as separate sources of information, we create redundancy. This is a classic case of "code smell," a term from Clean Code practices.
 
-So, the next time you see duplication, don't just blindly refactor it. Understand the problem first. You may not know the requirements yet. You may not know the exact problem yet. So, don't try to create abstractions before knowing the exact requirements.
-However when you are 100% sure, you can use one of the above solutions to remove duplication and make your React code more maintainable and easier to understand.
+In software engineering, we often aim for `knowledge abstraction` rather than just code abstraction. This means we should rely on one clear source of truth for the logic behind our code. When code includes comments, any change in the code should also be reflected in the comments. If you forget to update the comments, they can become outdated and misleading. This inconsistency breaks the DRY principle and makes maintaining the code more difficult.
+
+Next time you encounter duplication in your code, avoid jumping straight into refactoring. First, take the time to fully understand the problem. You might not yet grasp all the requirements or the precise nature of the issue. It’s important to avoid creating abstractions before you have a clear understanding of the requirements.
+Once you’re confident about the problem and requirements, you can apply one of the suggested solutions to eliminate duplication. This will help make your React code more maintainable and easier to understand.
 
 ## Conclusion
-- Avoid premature reusability, It is okay to refactor duplicate code and create knowledge abstraction in the code, but take your time to figure out all the requirements beforehand.
-- Typescript is going to be a great help in creating reusable components and functions. There are lot of type helpers bundled with typescript that can help you create reusable types, components and functions.
-- Avoid using HOCs as much as you can, Do not bring them to the new codebase. But if you are working on a legacy codebase with existing HOCs, it's better to not bring more patterns as HOCs probably will fit right to your team's mental model.
+- <strong>Avoid premature reusability.</strong> It’s fine to refactor duplicate code and implement knowledge abstraction, but make sure you thoroughly understand all requirements before doing so. Rushing to create abstractions without a complete grasp of the problem can lead to ineffective solutions.
+- <strong>Typescript is your ally.</strong> It offers powerful tools for creating reusable components and functions. Its type helpers and utilities can significantly enhance the reuse of types, components, and functions across your codebase.
+- <strong>Learn modern practices.</strong> Avoid introducing new HOCs into your codebase, instead use hooks or the owner component pattern. But if you’re working with an existing codebase that already uses HOCs, it’s best to continue using them to align with your team’s existing practices and mental model.
+
+Always remember, duplications leads to less bugs than abstractions when business requirements get too complex. In almost every situation, your business requirements will always diverge and you will have to make a trade-off between focusing on convering the code or having happy mornings.

@@ -51,7 +51,7 @@ type A = {a: string}
 type B = {b: number}
 ```
 
-When we do intersection of two types, `A & B`, intiutively we may think, they have nothing in common in terms of the properties as both A and B seem mutually exclusive with A and B no overlapping properties. But in terms of sets, the intersection of two sets is the set of all elements that are in both sets. So the intersection of types `A` and `B` is an empty set, i.e. `{a: string, b: number}`. This can be understood with diagram below.
+When we do intersection of two types, `A & B`, intiutively we may think, they have nothing in common in terms of the properties as both A and B seem mutually exclusive with A and B no overlapping properties. But in terms of sets, the intersection of two sets is the set of all elements that are in both sets. So the intersection of types `A` and `B` is a set containing properties from both A and B, i.e. `{a: string, b: number}`. This can be understood with diagram below.
 
 import { Image } from "astro:assets";
 
