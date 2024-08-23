@@ -391,7 +391,7 @@ This syntax is much cleaner and easier to understand. We are no longer concerned
 - We are using the `SafeParamsLayout` component to wrap the children component. We are passing the route configuration object, searchParams, and params as props to the `SafeParamsLayout` component.
 - We are using the function syntax to render the children component. We are passing the parsed values of the params and searchParams to the children component. This way we are no longer concerned with what the children component is doing with the parsed values. We are just passing the parsed values to the children component.
 
-## In defense of Duplication
+## Make sure you know what you are doing.
 While these solutions are great, you are not going to know when to use them unless you understand the problem. People often try to create abstractions before knowing the exact requirements. This leads to a lot of unnecessary complexity, unmaintainable architecture. This is also known as premature abstraction and you may as well know - `premature abstraction is the root of all evil`.
 
 Duplication stands for the idea of writing the same code in multiple places. In software engineering, we have this notion of DRY (Don't Repeat Yourself) which is a principle of software development aimed at reducing repetition of software patterns, replacing it with abstractions or using data normalization to avoid redundancy. However, It is also misunderstood a lot.
@@ -490,7 +490,12 @@ async function getUserDetails(userId, birthdate, latitude, longitude, couponCode
 }
 ```
 
-Now this may seem like a good normal function that takes care of everything related to coupon code. But it is not DRY. it is not DRY because of the code, the code is fine. It is because of the comments. We have created two sources of truth, the code and the comments. This is a classic example of duplication. The comments are duplicating the code. So anytime, you change the code, you have to change the comments as well. If you forget to do so, the comments will become outdated and misleading. This is how it breaks the DRY principle.
+Now this may seem like a good normal function that takes care of everything related to coupon code. But it is not DRY. it is not DRY because of the code, the code is fine. It is because of the comments. We have created two sources of truth, the code and the comments. This is a classic example of duplication and is often termed as code smell (Clean Code 101). Anytime, you change the code, you have to change the comments as well. If you forget to do so, the comments will become outdated and misleading. This is how it breaks the DRY principle.
 
 So, the next time you see duplication, don't just blindly refactor it. Understand the problem first. You may not know the requirements yet. You may not know the exact problem yet. So, don't try to create abstractions before knowing the exact requirements.
 However when you are 100% sure, you can use one of the above solutions to remove duplication and make your React code more maintainable and easier to understand.
+
+## Conclusion
+- Avoid premature reusability, It is okay to refactor duplicate code and create knowledge abstraction in the code, but take your time to figure out all the requirements beforehand.
+- Typescript is going to be a great help in creating reusable components and functions. There are lot of type helpers bundled with typescript that can help you create reusable types, components and functions.
+- Avoid using HOCs as much as you can, Do not bring them to the new codebase. But if you are working on a legacy codebase with existing HOCs, it's better to not bring more patterns as HOCs probably will fit right to your team's mental model.
