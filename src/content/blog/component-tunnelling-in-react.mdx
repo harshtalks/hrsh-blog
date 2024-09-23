@@ -12,8 +12,10 @@ image: https://res.cloudinary.com/hp-creative/image/upload/fl_preserve_transpare
 ---
 
 ## Tunnelling is fun
-We will write a very simple and intuitive function for component tunnelling system, in which one component can be declared at one place and the result will appear somewhere else in the DOM. This is a fun exercise to understand React rendering.
-This example also has a real use case. For those who work in the WebGL space, you may have come across the need of declaring plain old html tags in the Canvas. This is not possible because React uses a different Renderer for canvas where html tags are not supported. In such situation this would be a great way to tunnel the html tags through the canvas. Those Html tags will be tunneled through the canvas and will be rendered in the renderer that supports html tags.
+We’ll create a simple and intuitive function for a component tunneling system, allowing a component to be declared in one location and rendered elsewhere in the DOM. This exercise is a great way to deepen your understanding of React’s rendering mechanics.
+
+This approach has practical applications, especially for those working in the WebGL space. You may have encountered scenarios where you want to use standard HTML elements within a canvas, but this isn’t possible since React uses a different renderer for the canvas that doesn’t support HTML tags. In such cases, our tunneling system allows HTML elements to be routed through the canvas and rendered in a context that does support them.
+
 
 ### Requirements
 - React.js
@@ -21,9 +23,9 @@ This example also has a real use case. For those who work in the WebGL space, yo
 - A very basic state management library like Zustand or Jotai. I will be using xstate stores because the creator of xstate replied to my tweet once and I am a fanboy now.
 
 We need to create a function that encapsulates following -
-- A state management store to store the children/components that will be tunneled.
-- A function to declare Outlet, the component where the tunneled components will be rendered.
-- A function to declare Inlet which will be used to declare the components that will be tunneled.
+- A state management store to store the children/components that will be tunnelled.
+- A function to declare Outlet, the component where the tunnelled components will be rendered.
+- A function to declare Inlet which will be used to declare the components that will be tunnelled.
 
 Seems easy right. Let's start with the basic types.
 
@@ -34,7 +36,7 @@ export type InletProps = {
   children: ReactNode;
 };
 ```
-Our inlet will accept children that will be tunneled.
+Our inlet will accept children that will be tunnelled.
 
 ```tsx
 import { createStore } from "@xstate/store";
@@ -137,11 +139,11 @@ export default tunnel;
 ```
 
 Alright, this may seem like a lot to unpack. Let's break it down.
-- We have moved our tunnelStore inside the function, because we want to create a new store for every instance of the tunnel. This way we can easily manage the children that are tunneled.
-- tunnelStore has a state variable to store all the children that are tunneled.
+- We have moved our tunnelStore inside the function, because we want to create a new store for every instance of the tunnel. This way we can easily manage the children that are tunnelled.
+- tunnelStore has a state variable to store all the children that are tunnelled.
 - in the Inlet function, we are running an effect that will add the children to the store when the component is mounted and remove the children from the store when the component is unmounted.
-- We are not returning anything from the Inlet function because we do not want to render anything. We just want to tunnel the children. It acts as an entry point for the children to be tunneled.
-- Finally, we have the Outlet function. This is where the tunneled children will be rendered. We are using the useSelector hook from xstate to get the currentChildren from the store. We are then rendering the children.
+- We are not returning anything from the Inlet function because we do not want to render anything. We just want to tunnel the children. It acts as an entry point for the children to be tunnelled.
+- Finally, we have the Outlet function. This is where the tunnelled children will be rendered. We are using the useSelector hook from xstate to get the currentChildren from the store. We are then rendering the children.
 
 Now let's see how we can use this tunnel function. We have a very simple Vite setup with React and TypeScript. and we have defined the tunnel function in tunnel.ts file. Now in App.tsx,
 
@@ -190,7 +192,7 @@ function App() {
 export default App;
 ```
 
-In the above code, we have created an Input component that will tunnel 5 li tags. We have also created an Output component where the tunneled li tags will be rendered. We have used the tunnelInstance to get the Inlet and Outlet functions. We have also used the Inlet and Outlet functions to tunnel the children and render the children respectively.
+In the above code, we have created an Input component that will tunnel 5 li tags. We have also created an Output component where the tunnelled li tags will be rendered. We have used the tunnelInstance to get the Inlet and Outlet functions. We have also used the Inlet and Outlet functions to tunnel the children and render the children respectively.
 With the current implementation, our list items will render at the place of output component resulting in a complete unordered list.
 If we inspect the DOM we will see that the list items are rendered inside the output component -
 
