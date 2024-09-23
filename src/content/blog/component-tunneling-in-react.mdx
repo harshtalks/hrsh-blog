@@ -1,7 +1,7 @@
 ---
-title: Component Tunneling in React.js
+title: Component Tunnelling in React.js
 pubDate: 2024-09-23
-description: Component tunneling is a rather underrated pattern in React.js to allow components to communicate with each other without having to be located in a direct parent-child relationship.
+description: Component Tunnelling is a rather underrated pattern in React.js to allow components to communicate with each other without having to be located in a direct parent-child relationship.
 tags:
     - typescript
     - react
@@ -11,8 +11,8 @@ featured: true
 image: https://res.cloudinary.com/hp-creative/image/upload/fl_preserve_transparency/v1727064041/Image_from_imgsrc_2_hvcah6.jpg?_s=public-apps
 ---
 
-## Tunneling is fun
-We will write a very simple and intuitive function for component tunneling system, in which one component can be declared at one place and the result will appear somewhere else in the DOM. This is a fun exercise to understand React rendering.
+## Tunnelling is fun
+We will write a very simple and intuitive function for component tunnelling system, in which one component can be declared at one place and the result will appear somewhere else in the DOM. This is a fun exercise to understand React rendering.
 This example also has a real use case. For those who work in the WebGL space, you may have come across the need of declaring plain old html tags in the Canvas. This is not possible because React uses a different Renderer for canvas where html tags are not supported. In such situation this would be a great way to tunnel the html tags through the canvas. Those Html tags will be tunneled through the canvas and will be rendered in the renderer that supports html tags.
 
 ### Requirements
@@ -207,6 +207,6 @@ If we inspect the DOM we will see that the list items are rendered inside the ou
 </div>;
 ```
 
-With just few lines of code, we have got ourselves a very concrete tunneling system. We can now tunnel any component to any other component. This is a very powerful concept and can be used in many scenarios.
+With just few lines of code, we have got ourselves a very concrete tunnelling system. We can now tunnel any component to any other component. This is a very powerful concept and can be used in many scenarios.
 
 I hope you enjoyed this article. If you have any questions or feedback, feel free to reach out to me on [Twitter](https://twitter.com/harshstalks). I would love to hear from you.
