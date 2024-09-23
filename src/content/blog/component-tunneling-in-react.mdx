@@ -1,0 +1,212 @@
+---
+title: Component Tunneling in React.js
+pubDate: 2024-09-23
+description: Component tunneling is a rather underrated pattern in React.js to allow components to communicate with each other without having to be located in a direct parent-child relationship.
+tags:
+    - typescript
+    - react
+    - types
+published: true
+featured: true
+image: https://asset.cloudinary.com/hp-creative/a356bf4744c9547ab15b02f63efc5e5a
+---
+
+## Tunneling is fun
+We will write a very simple and intuitive function for component tunneling system, in which one component can be declared at one place and the result will appear somewhere else in the DOM. This is a fun exercise to understand React rendering.
+This example also has a real use case. For those who work in the WebGL space, you may have come across the need of declaring plain old html tags in the Canvas. This is not possible because React uses a different Renderer for canvas where html tags are not supported. In such situation this would be a great way to tunnel the html tags through the canvas. Those Html tags will be tunneled through the canvas and will be rendered in the renderer that supports html tags.
+
+### Requirements
+- React.js
+- TypeScript
+- A very basic state management library like Zustand or Jotai. I will be using xstate stores because the creator of xstate replied to my tweet once and I am a fanboy now.
+
+We need to create a function that encapsulates following -
+- A state management store to store the children/components that will be tunneled.
+- A function to declare Outlet, the component where the tunneled components will be rendered.
+- A function to declare Inlet which will be used to declare the components that will be tunneled.
+
+Seems easy right. Let's start with the basic types.
+
+```tsx
+import { ReactNode } from "react";
+
+export type InletProps = {
+  children: ReactNode;
+};
+```
+Our inlet will accept children that will be tunneled.
+
+```tsx
+import { createStore } from "@xstate/store";
+
+const tunnel = () => {
+  const tunnelStore = createStore(
+    {
+      currentChildren: [] as ReactNode[],
+    },
+    {
+      setCurrent: (_, event: { value: ReactNode }) => {
+        return {
+          currentChildren: [..._.currentChildren, event.value],
+        };
+      },
+
+      removeCurrent: (_, event: { value: ReactNode }) => {
+        return {
+          currentChildren: _.currentChildren.filter(
+            (child) => child !== event.value,
+          ),
+        };
+      },
+    },
+  );
+};
+```
+
+We have declared our store. We have two actions, `setCurrent` and `removeCurrent`. `setCurrent` will add the child to the store and `removeCurrent` will remove the child from the store. As you may have guessed, one of these actions will act as a cleanup for the effects that are created when the component is unmounted. If you come from a Zustand world, the createStore Api will feel very similar to you. I like this signature way more than Zustand when working with Typescript.
+
+You might be wondering, why have we used currentChildren as Array?? It's because we can have multiple components that we want to tunnel for a single instance.
+
+Now coming to the rest of the functions.
+
+```tsx
+import { createStore } from "@xstate/store";
+import { useSelector } from "@xstate/store/react";
+import { ReactNode, useEffect } from "react";
+
+export type InletProps = {
+  children: ReactNode;
+};
+
+const tunnel = () => {
+  const tunnelStore = createStore(
+    {
+      currentChildren: [] as ReactNode[],
+    },
+    {
+      setCurrent: (_, event: { value: ReactNode }) => {
+        return {
+          currentChildren: [..._.currentChildren, event.value],
+        };
+      },
+
+      removeCurrent: (_, event: { value: ReactNode }) => {
+        return {
+          currentChildren: _.currentChildren.filter(
+            (child) => child !== event.value,
+          ),
+        };
+      },
+    },
+  );
+
+  return {
+    Inlet: ({ children }: InletProps) => {
+      // running effect, evertime we call this component, we will update the store to include the children in the currentChildren Array.
+
+      useEffect(() => {
+        tunnelStore.send({
+          type: "setCurrent",
+          value: children,
+        });
+
+        return () => {
+          tunnelStore.send({
+            type: "removeCurrent",
+            value: children,
+          });
+        };
+      }, [children]);
+
+      // this is just to declare, we do not actually care about what it returns.
+      return null;
+    },
+
+    Outlet: () => {
+      const children = useSelector(
+        tunnelStore,
+        (state) => state.context.currentChildren,
+      );
+
+      return <> {children} </>;
+    },
+  };
+};
+
+export default tunnel;
+```
+
+Alright, this may seem like a lot to unpack. Let's break it down.
+- We have moved our tunnelStore inside the function, because we want to create a new store for every instance of the tunnel. This way we can easily manage the children that are tunneled.
+- tunnelStore has a state variable to store all the children that are tunneled.
+- in the Inlet function, we are running an effect that will add the children to the store when the component is mounted and remove the children from the store when the component is unmounted.
+- We are not returning anything from the Inlet function because we do not want to render anything. We just want to tunnel the children. It acts as an entry point for the children to be tunneled.
+- Finally, we have the Outlet function. This is where the tunneled children will be rendered. We are using the useSelector hook from xstate to get the currentChildren from the store. We are then rendering the children.
+
+Now let's see how we can use this tunnel function. We have a very simple Vite setup with React and TypeScript. and we have defined the tunnel function in tunnel.ts file. Now in App.tsx,
+
+
+```tsx
+// App.tsx
+import './App.css';
+import tunnel from './tunnel';
+
+const tunnelInstance = tunnel();
+
+const Output = () => {
+  return (
+    <div>
+      <div>the output should appear somewhere here</div>
+      <ul>
+        <tunnelInstance.Outlet />
+      </ul>
+    </div>
+  );
+};
+
+const Input = () => {
+  return (
+    <div>
+      {Array.from({ length: 5 }).map((_, i) => {
+        return (
+          <tunnelInstance.Inlet key={i}>
+            <li>item - {i + 1} rendered here</li>
+          </tunnelInstance.Inlet>
+        );
+      })}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <div>
+      <Output />
+      <Input />
+    </div>
+  );
+}
+
+export default App;
+```
+
+In the above code, we have created an Input component that will tunnel 5 li tags. We have also created an Output component where the tunneled li tags will be rendered. We have used the tunnelInstance to get the Inlet and Outlet functions. We have also used the Inlet and Outlet functions to tunnel the children and render the children respectively.
+With the current implementation, our list items will render at the place of output component resulting in a complete unordered list.
+If we inspect the DOM we will see that the list items are rendered inside the output component -
+
+```html
+<div>
+  <div>the output should appear somewhere here</div>
+  <ul>
+    <li>item - 1 rendered here</li>
+    <li>item - 2 rendered here</li>
+    <li>item - 3 rendered here</li>
+    <li>item - 4 rendered here</li>
+    <li>item - 5 rendered here</li>
+  </ul>
+</div>;
+```
+
+With just few lines of code, we have got ourselves a very concrete tunneling system. We can now tunnel any component to any other component. This is a very powerful concept and can be used in many scenarios.
+
+I hope you enjoyed this article. If you have any questions or feedback, feel free to reach out to me on [Twitter](https://twitter.com/harshstalks). I would love to hear from you.
