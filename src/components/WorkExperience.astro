@@ -2,15 +2,39 @@
 import ArrowUpRight from 'phosphor-astro/ArrowUpRight.astro'
 
 const workExperience = [
+  {
+   title: "Frontend Engineer - 2",
+     company: {
+              link: "https://www.trademarkia.com",
+              name: "Trademarkia"
+          },
+            duration: {
+              start: "August 2024",
+              end: "Present"
+          },
+          description: [
+              "Just having fun",
+          ],
+          skills: [
+              "Typescript",
+              "Bun",
+              "Next.js",
+              "React",
+              "Tailwind",
+              "RSC",
+              "React Query",
+              "HTTP Caching",
+          ]
+  },
 {
  title: "Frontend Engineer",
    company: {
             link: "https://www.trademarkia.com",
             name: "Trademarkia"
-        },  
+        },
           duration: {
             start: "July 2024",
-            end: "Present"
+            end: "August 2024"
         },
         description: [
             "Working on all things legal AI",
@@ -31,7 +55,7 @@ const workExperience = [
         company: {
             link: "https://www.trademarkia.com",
             name: "Trademarkia"
-        },  
+        },
          duration: {
             start: "January 2024",
             end: "June 2024"
@@ -104,7 +128,7 @@ const workExperience = [
 <div>
     <!-- Heading  -->
     <h4 class="text-base">Work Experience</h4>
-    
+
     <!-- Content  -->
     <div class="space-y-12">
         {
@@ -126,7 +150,7 @@ const workExperience = [
                 </div>
                 <!-- Skills  -->
                 <div class="text-zinc-500 text-sm flex justify-start items-center gap-3 flex-wrap">
-                    {experience.skills.map((el,i) => 
+                    {experience.skills.map((el,i) =>
                         <p class="!m-0">{el}</p>
                     )}
                 </div>

@@ -1,6 +1,19 @@
 ---
 import GithubLogo from "phosphor-astro/GithubLogo.astro";
 const projects = [
+  {
+   time: "2024",
+   title: "Tiptap extensions",
+   gh:"https://github.com/harshtalks/tiptap-plugins",
+   skills: [
+      "React",
+      "Typescript",
+      "NPM Package Publishing Best Practices"
+   ],
+   description: [
+      "Open source tiptap extensions for - Image Resizer and Aligner, and Notion like Slash CMD."
+   ]
+  },
     {
      time: "2024",
      title: "Tempeh",
@@ -13,31 +26,29 @@ const projects = [
      ],
      description: [
         "Declerative Routing (inspired by React Router) library for Next.js.",
+        "CLI tool to bootstrap and generate routes in the project.",
         "Supports type safe routing with typed parameters and search params. useRouter similar APIs at route level to extend the schema validated type safety.",
         "Supports type safe server actions with typed input/output. Inspired by Astro's server actions API.",
-     ] 
+     ]
     },
     {
-        time: "2023",
-        title:"Workspace-Vault",
+        time: "Ongoing",
+        title:"Derivative",
         description: [
-            `Developed a secure cross-platform environment variable sharing platform (workspace-vault) using Next.js and TypeScript
-for frontend, incorporating a Backend for Frontend (BFF) Pattern with Tailwind CSS and Shadcn (vercel design
-language) React components.`,
-`Implemented robust end-to-end encryption utilizing user-provided secret keys, generating a master key through the
-PBKDF2 algorithm, and employing AES encryption for variable storage in the database.`,
-`Enhanced security measures by integrating WebAuthn for multi-factor authentication, ensuring a secure user
-authentication process, and implemented access tracking using Redis for logging user interactions with the application."`
+`Saas platform for programmatic invoices written in Typescript, Next, trpc and Effect-TS.`,
+`Notion style schema driven wysiwyg compatible invoice editor - end to end serialization.`,
+`Custom MFA auth written in lucia, sqlite and web-auth.`
         ],
-        gh: "https://github.com/harshtalks/workspace-vault",
+        gh: "https://github.com/harshtalks/derivative",
         skills: [
             "Next.js",
-            "RSC", 
+            "RSC",
             "Typescript",
-            "Cryptography", 
+            "trpc",
             "Node.js",
-            "Prisma", 
-            "Postgres", 
+            "Hono",
+            "Drizzle",
+            "Sqlite",
             "Redis",
             "REST API",
         ]
@@ -54,9 +65,9 @@ authentication process, and implemented access tracking using Redis for logging 
 // obtain valuable insights quickly.`
 //         ],
 //         skills: [
-//             "Next.js", 
-//             "Typescript", 
-//             "Python", 
+//             "Next.js",
+//             "Typescript",
+//             "Python",
 //             "FASTAPI",
 //             "NLP",
 //             "Web Scraping"
@@ -80,8 +91,6 @@ authentication process, and implemented access tracking using Redis for logging 
 techniques on a dumped yelp database to efficiently locate nearby businesses for users in real time.`,
 `Orchestrated a robust authentication layer utilizing custom JWT (JSON Web Tokens) for secure user access, while
 implementing a sophisticated rate limiter to maintain optimal API performance and prevent abuse.`,
-`Implemented comprehensive API documentation through OpenAPI specifications, enhancing project maintainability, and
-integrated Bing API seamlessly to compute precise distances from users’ locations to nearby businesses, enriching user experience.`
         ],
         gh: "https://github.com/harshtalks/proximi"
     }
@@ -102,7 +111,7 @@ integrated Bing API seamlessly to compute precise distances from users’ locati
 
             <!-- Actual Details  -->
             <div class="space-y-2 col-span-3">
-                
+
                 <div class="flex items-center gap-2">
                     <h4 class="!m-0 text-base text-zinc-700">{project.title}</h4>
                     <a href=`${project.gh}` target="_blank"><GithubLogo class="h-6 text-zinc-500 w-6 inline hover:text-zinc-900"/></a>
@@ -112,7 +121,7 @@ integrated Bing API seamlessly to compute precise distances from users’ locati
                 </div>
                 <!-- Skills  -->
                 <div class="text-zinc-500 text-sm flex justify-start items-center gap-3 flex-wrap">
-                    {project.skills.map((el) => 
+                    {project.skills.map((el) =>
                         <p class="!m-0">{el}</p>
                     )}
                 </div>
