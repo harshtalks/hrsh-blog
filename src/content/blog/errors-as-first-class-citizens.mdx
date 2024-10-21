@@ -1,0 +1,109 @@
+---
+title: Treat Errors as First-Class Citizens
+pubDate: 2024-10-21
+description: In this article, we will discuss how to treat errors as first-class citizens in your application. We will explore how to handle errors gracefully and provide a better developer experience.
+tags:
+    - typescript
+    - react
+    - javascript
+    - async
+published: true
+featured: true
+image: https://res.cloudinary.com/hp-creative/image/upload/v1729514388/Image_from_imgsrc_3.png
+---
+
+In my opinion, one can become a seasoned developer once they learn how to read and handle errors. Handling errors gracefully is the sexiest thing a developer can do. I have navigated through many codebases in the past few years, and despite using the same technology stack (one that directly benefits Vercel), they all had one thing in common: they handled errors differently, and all of them were sucked.
+
+Here’s a better way to handle errors in your application: return the error as a value. If you're familiar with Go, you’ll notice that errors are always returned alongside the value. This approach treats errors as first-class citizens in your application, which is a great practice. We’re going to adopt this method in our favorite language—JavaScript (or TypeScript, because who doesn’t appreciate a bit of type safety, even if it adds an extra build step?).
+
+### Goal
+- We will define a new type/interface called `Result` which will be used to return the value along with the error.
+- We will leverage my personal favorite trick from programming world known as `Tagged Union`. A tagged union is a way to define a type that can have one of several different values, each with its own type, and a tag indicating which value it is (More on this later).
+- We will need to create a wrapper utility to wrap the functions to return the error as a value. We will call these functions as `callbacks`.
+- We will use typescript generics to enhance DX and provide better type safety.
+
+### Let's start with the basic types.
+```tsx
+// Result type
+type Result<TValue extends any, TErr extends any = any> =
+  | {
+      success: true;
+      value: TValue;
+    }
+  | {
+      success: false;
+      error: TErr;
+    };
+```
+Our `Result` type will have two properties - `success` and `value`. If the `success` is true, it means the operation was successful and the `value` will contain the result. If the `success` is false, it means the operation failed and the `error` will contain the error.
+
+```tsx
+type MaybePromiseResult<TValue extends any, TErr extends any = any> =
+  TValue extends Promise<infer AwaitedValue>
+    ? Promise<Result<AwaitedValue, TErr>>
+    : Result<TValue, TErr>;
+```
+Our `MaybePromiseResult` type will be used to handle the promises. If the `value` is a promise, we will return a promise with the `Result` type. If the `value` is not a promise, we will return the `Result` type. Note that, this is the wrapper type that we will use as a return type for our `callbacks`.
+
+### Let's create a utility function to wrap the functions.
+```tsx
+// callback type
+type Callback = (...args: any) => any;
+
+// wrapper function
+const wrapIt =
+  <TCb extends Callback>(callback: TCb) =>
+  <TErr extends any = any>(...cbArgs: Parameters<TCb>) => {
+    try {
+      const cbResult = callback(...(cbArgs as Array<unknown>));
+
+      if (cbResult instanceof Promise) {
+        return cbResult
+          .then((value) => ({ success: true, value }))
+          .catch((error) => ({ success: false, error })) as MaybePromiseResult<
+          ReturnType<TCb>,
+          TErr
+        >;
+      }
+
+      return { success: true, value: cbResult } as MaybePromiseResult<
+        ReturnType<TCb>,
+        TErr
+      >;
+    } catch (error) {
+      return { success: false, error } as MaybePromiseResult<
+        ReturnType<TCb>,
+        TErr
+      >;
+    }
+  };
+
+```
+
+- Our `wrapIt` function will take a callback function as an argument and return a new function that will wrap the callback function.
+- Syntax is very similar to higher order functions in JavaScript. We are using a curried function to return a new function that will take the arguments for the callback function.
+- Instead of currying, we could pass the argument along with the callback function, but I prefer currying because it allows me to pass the type of the error as type of value is already inferred.
+- We are using a `try-catch` block to catch the errors. If the callback function returns a promise, we will handle the promise using `then` and `catch` blocks. If the callback function does not return a promise, we will return the value as it is.
+- We are using `ReturnType` to infer the return type of the callback function. This will help us to provide better type safety.
+
+### Let's create a simple function to test our utility.
+```tsx
+const divide = (a: number, b: number) => {
+  if (b === 0) {
+    throw new Error("Cannot divide by zero");
+  }
+
+  return a / b;
+};
+
+const result = wrapIt(divide)(10, 0);
+console.log(result);
+```
+
+- Our `divide` function will take two arguments and return the result of the division. If the second argument is zero, it will throw an error.
+- We are using our `wrapIt` function to wrap the `divide` function. We are passing the arguments for the `divide` function.
+- The result here would be success: false and error: Error: Cannot divide by zero.
+- Similary this will handle async functions as well.
+
+### Conclusion
+With just few lines of code, we have created a utility function that will help us to treat errors as values in our application. We have used typescript generics to provide better type safety and enhance developer experience. No more `try-catch` soups in the codebase. Remember this is just how I like the signature of the function, you can always modify it to suit your needs.
