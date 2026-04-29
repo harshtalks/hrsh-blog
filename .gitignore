@@ -20,4 +20,8 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
+# Go SSH server
+.ssh/
+hrsh-blog
+
 package-lock.json

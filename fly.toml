@@ -1,0 +1,23 @@
+app = "hrsh-blog"
+primary_region = "sin"  # Singapore — change to your nearest: iad, lhr, fra, nrt, syd
+
+[build]
+
+[env]
+
+[[services]]
+  internal_port = 2222
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 22
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 50
+    soft_limit = 40
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
