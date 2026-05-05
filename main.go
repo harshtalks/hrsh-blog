@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/keygen"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
+	gossh "golang.org/x/crypto/ssh"
 	bm "github.com/charmbracelet/wish/bubbletea"
 	lm "github.com/charmbracelet/wish/logging"
-	"github.com/muesli/termenv"
 	"golang.org/x/time/rate"
 
 	"github.com/harshtalks/hrsh-blog/internal/content"
@@ -82,11 +82,26 @@ func maxConnMiddleware(next ssh.Handler) ssh.Handler {
 	}
 }
 
-func main() {
-	// The server process has no TTY (especially in Docker), so termenv would
-	// default to Ascii and strip all ANSI colors. Force TrueColor globally.
-	lipgloss.SetDefaultRenderer(lipgloss.NewRenderer(os.Stdout, termenv.WithProfile(termenv.TrueColor)))
+func hostKeyOption() ssh.Option {
+	// Production: load raw PEM from env var (e.g., Railway/Fly.io secret)
+	if pem := os.Getenv("SSH_HOST_KEY"); pem != "" {
+		log.Info("Using SSH host key from SSH_HOST_KEY env var")
+		return wish.WithHostKeyPEM([]byte(pem))
+	}
 
+	// Local dev: load from file, auto-generate if missing
+	path := ".ssh/term_info_ed25519"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		log.Info("Host key not found, generating new one", "path", path)
+		if _, err := keygen.New(path, keygen.WithKeyType(keygen.Ed25519), keygen.WithWrite()); err != nil {
+			log.Fatal("Failed to generate host key", "error", err)
+		}
+	}
+	log.Info("Using SSH host key from file", "path", path)
+	return wish.WithHostKeyPath(path)
+}
+
+func main() {
 	posts, err := content.LoadPosts(postsFS, "src/content/blog")
 	if err != nil {
 		log.Error("Failed to load posts", "error", err)
@@ -96,7 +111,28 @@ func main() {
 
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(host, port)),
-		wish.WithHostKeyPath(".ssh/term_info_ed25519"),
+		func(srv *ssh.Server) error {
+			// Accept ALL connections without authentication. We do this by
+			// setting NoClientAuth (handles "none" method) AND permissive
+			// callbacks for password/keyboard-interactive. OpenSSH may send
+			// "publickey" first even when the user has no keys; without a
+			// PublicKeyCallback the server advertises password/keyboard-
+			// interactive instead, which we accept silently.
+			log.Info("Enabling permissive SSH auth: NoClientAuth + password + keyboard-interactive")
+			srv.ServerConfigCallback = func(ctx ssh.Context) *gossh.ServerConfig {
+				return &gossh.ServerConfig{
+					NoClientAuth: true,
+					PasswordCallback: func(conn gossh.ConnMetadata, password []byte) (*gossh.Permissions, error) {
+						return &gossh.Permissions{}, nil
+					},
+					KeyboardInteractiveCallback: func(conn gossh.ConnMetadata, client gossh.KeyboardInteractiveChallenge) (*gossh.Permissions, error) {
+						return &gossh.Permissions{}, nil
+					},
+				}
+			}
+			return nil
+		},
+		hostKeyOption(),
 		wish.WithMiddleware(
 			rateLimitMiddleware,
 			maxConnMiddleware,
@@ -106,7 +142,9 @@ func main() {
 					fmt.Fprintln(sess, "This app requires an interactive terminal.")
 					return nil, nil
 				}
-				return ui.New(posts, pty.Window.Width, pty.Window.Height), []tea.ProgramOption{
+				renderer := bm.MakeRenderer(sess)
+				caps := ui.DetectCapabilities(sess, renderer)
+				return ui.New(posts, pty.Window.Width, pty.Window.Height, renderer, caps), []tea.ProgramOption{
 					tea.WithAltScreen(),
 				}
 			}),

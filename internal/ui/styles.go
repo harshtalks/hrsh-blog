@@ -10,33 +10,100 @@ const (
 	colorBg     = lipgloss.Color("#141414")
 )
 
-var (
-	navBarStyle = lipgloss.NewStyle().Background(colorBg)
+type Styles struct {
+	Renderer      *lipgloss.Renderer
+	Caps          Capabilities
+	NavBar        lipgloss.Style
+	NavItem       lipgloss.Style
+	NavItemActive lipgloss.Style
+	Footer        lipgloss.Style
+	Accent        lipgloss.Style
+	Muted         lipgloss.Style
+	Dim           lipgloss.Style
+	InputLabel    lipgloss.Style
+	Error         lipgloss.Style
+	Success       lipgloss.Style
+}
 
-	navItemStyle = lipgloss.NewStyle().
+func NewStyles(r *lipgloss.Renderer, caps Capabilities) Styles {
+	return Styles{
+		Renderer: r,
+		Caps:     caps,
+		NavBar:   r.NewStyle().Background(colorBg),
+		NavItem: r.NewStyle().
 			Foreground(colorMuted).
 			Background(colorBg).
-			Padding(0, 2)
-
-	navItemActiveStyle = lipgloss.NewStyle().
-				Foreground(colorAccent).
-				Background(colorBg).
-				Bold(true).
-				Padding(0, 2)
-
-	footerStyle = lipgloss.NewStyle().
+			Padding(0, 2),
+		NavItemActive: r.NewStyle().
+			Foreground(colorAccent).
+			Background(colorBg).
+			Bold(true).
+			Padding(0, 2),
+		Footer: r.NewStyle().
 			Foreground(colorDim).
 			Background(colorBg).
-			Padding(0, 1)
+			Padding(0, 1),
+		Accent:     r.NewStyle().Foreground(colorAccent).Bold(true),
+		Muted:      r.NewStyle().Foreground(colorMuted),
+		Dim:        r.NewStyle().Foreground(colorDim),
+		InputLabel: r.NewStyle().Foreground(colorMuted),
+		Error:      r.NewStyle().Foreground(lipgloss.Color("#FF5555")),
+		Success:    r.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
+	}
+}
 
-	accentStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
-	mutedStyle  = lipgloss.NewStyle().Foreground(colorMuted)
-	dimStyle    = lipgloss.NewStyle().Foreground(colorDim)
+func (s Styles) Bullet() string {
+	if s.Caps.HasUnicode {
+		return "▸"
+	}
+	return ">"
+}
 
-	selectedStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
-	normalStyle   = lipgloss.NewStyle().Foreground(colorText)
+func (s Styles) Check() string {
+	if s.Caps.HasUnicode {
+		return "✓"
+	}
+	return "[OK]"
+}
 
-	inputLabelStyle = lipgloss.NewStyle().Foreground(colorMuted)
-	errorStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555"))
-	successStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B"))
-)
+func (s Styles) Cross() string {
+	if s.Caps.HasUnicode {
+		return "✗"
+	}
+	return "[ERR]"
+}
+
+func (s Styles) Dot() string {
+	if s.Caps.HasUnicode {
+		return "·"
+	}
+	return "-"
+}
+
+func (s Styles) ArrowUp() string {
+	if s.Caps.HasUnicode {
+		return "↑"
+	}
+	return "^"
+}
+
+func (s Styles) ArrowDown() string {
+	if s.Caps.HasUnicode {
+		return "↓"
+	}
+	return "v"
+}
+
+func (s Styles) NowPlaying() string {
+	if s.Caps.HasUnicode {
+		return "▶"
+	}
+	return ">"
+}
+
+func (s Styles) Sep() string {
+	if s.Caps.HasUnicode {
+		return "─"
+	}
+	return "-"
+}

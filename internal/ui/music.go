@@ -33,6 +33,7 @@ type tracksFetchedMsg struct{ tracks []Track }
 type tracksFetchErrMsg struct{ err error }
 
 type MusicModel struct {
+	styles  Styles
 	state   musicState
 	tracks  []Track
 	errMsg  string
@@ -41,11 +42,12 @@ type MusicModel struct {
 	height  int
 }
 
-func newMusic(width, height int) MusicModel {
+func newMusic(styles Styles, width, height int) MusicModel {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
+	sp.Style = styles.Renderer.NewStyle().Foreground(colorAccent)
 	return MusicModel{
+		styles:  styles,
 		state:   musicStateIdle,
 		spinner: sp,
 		width:   width,
@@ -164,15 +166,16 @@ func relativeTime(t time.Time) string {
 }
 
 func (m MusicModel) View() string {
+	s := m.styles
 	switch m.state {
 	case musicStateIdle, musicStateLoading:
-		block := m.spinner.View() + "  " + mutedStyle.Render("Loading recent tracks...")
+		block := m.spinner.View() + "  " + s.Muted.Render("Loading recent tracks...")
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, block)
 	case musicStateError:
 		block := lipgloss.JoinVertical(lipgloss.Center,
-			errorStyle.Render("✗  Could not load tracks"),
+			s.Error.Render(s.Cross()+"  Could not load tracks"),
 			"",
-			mutedStyle.Render(m.errMsg),
+			s.Muted.Render(m.errMsg),
 		)
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, block)
 	}
@@ -180,41 +183,36 @@ func (m MusicModel) View() string {
 }
 
 func (m MusicModel) tracksView() string {
+	s := m.styles
+	r := s.Renderer
 	listW := min(70, m.width-8)
 
 	var rows []string
-	rows = append(rows, accentStyle.Render("Listening")+"  "+dimStyle.Render("recent plays · @"+config.LastFMUser))
-	rows = append(rows, dimStyle.Render(strings.Repeat("─", listW)))
+	rows = append(rows, s.Accent.Render("Listening")+"  "+s.Dim.Render("recent plays "+s.Dot()+" @"+config.LastFMUser))
+	rows = append(rows, s.Dim.Render(strings.Repeat(s.Sep(), listW)))
 	rows = append(rows, "")
 
 	for _, t := range m.tracks {
 		var when string
 		if t.NowPlaying {
-			when = accentStyle.Render("▶  now playing")
+			when = s.Accent.Render(s.NowPlaying() + "  now playing")
 		} else {
-			when = dimStyle.Render(relativeTime(t.PlayedAt))
+			when = s.Dim.Render(relativeTime(t.PlayedAt))
 		}
 
-		trackLine := lipgloss.NewStyle().
-			Foreground(colorText).
-			Bold(t.NowPlaying).
-			Render(t.Name)
-
-		artistLine := mutedStyle.Render(t.Artist)
-
-		metaLine := lipgloss.NewStyle().Width(listW).Render(
-			trackLine + "  " + when,
-		)
+		trackLine := r.NewStyle().Foreground(colorText).Bold(t.NowPlaying).Render(t.Name)
+		artistLine := s.Muted.Render(t.Artist)
+		metaLine := r.NewStyle().Width(listW).Render(trackLine + "  " + when)
 
 		rows = append(rows, metaLine)
 		rows = append(rows, artistLine)
 		rows = append(rows, "")
 	}
 
-	rows = append(rows, dimStyle.Render(strings.Repeat("─", listW)))
-	rows = append(rows, dimStyle.Render("scrobbled via Last.fm"))
+	rows = append(rows, s.Dim.Render(strings.Repeat(s.Sep(), listW)))
+	rows = append(rows, s.Dim.Render("scrobbled via Last.fm"))
 
-	block := lipgloss.NewStyle().Width(listW).Render(strings.Join(rows, "\n"))
+	block := r.NewStyle().Width(listW).Render(strings.Join(rows, "\n"))
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Top,
-		lipgloss.NewStyle().PaddingTop(2).Render(block))
+		r.NewStyle().PaddingTop(2).Render(block))
 }

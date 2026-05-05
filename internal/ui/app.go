@@ -19,6 +19,7 @@ const (
 )
 
 type App struct {
+	styles   Styles
 	section  section
 	width    int
 	height   int
@@ -28,30 +29,32 @@ type App struct {
 	music    MusicModel
 }
 
-func New(posts []content.Post, width, height int) App {
-	contentH := height - 4 // nav bar + separator line + footer bar
+func New(posts []content.Post, width, height int, renderer *lipgloss.Renderer, caps Capabilities) App {
+	styles := NewStyles(renderer, caps)
+	contentH := height - 4
 	return App{
+		styles:   styles,
 		section:  sectionOverview,
 		width:    width,
 		height:   height,
-		overview: newOverview(width, contentH),
-		blogs:    newBlogs(posts, width, contentH),
-		contact:  newContact(width, contentH),
-		music:    newMusic(width, contentH),
+		overview: newOverview(styles, width, contentH),
+		blogs:    newBlogs(styles, posts, width, contentH),
+		contact:  newContact(styles, width, contentH),
+		music:    newMusic(styles, width, contentH),
 	}
 }
 
-func (a App) Init() tea.Cmd {
-	return nil
-}
+func (a App) Init() tea.Cmd { return nil }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch msg.(type) {
 	case tracksFetchedMsg, tracksFetchErrMsg:
 		var cmd tea.Cmd
 		a.music, cmd = a.music.handleMsg(msg)
 		return a, cmd
+	}
 
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
@@ -63,12 +66,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
-		// ctrl+c always quits
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
 		}
 
-		// q quits unless contact form is active or blogs is in post view
 		if msg.String() == "q" {
 			if a.section == sectionBlogs && a.blogs.inPost() {
 				var cmd tea.Cmd
@@ -76,7 +77,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, cmd
 			}
 			if a.section == sectionContact && a.contact.hasFocusedInput() {
-				// let contact handle q as a character
 				var cmd tea.Cmd
 				a.contact, cmd = a.contact.handleMsg(msg)
 				return a, cmd
@@ -84,7 +84,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Quit
 		}
 
-		// nav shortcuts
 		switch msg.String() {
 		case "1":
 			a.section = sectionOverview
@@ -104,7 +103,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		case "tab":
-			// Only cycle nav if not inside a focused contact input
 			if a.section != sectionContact || !a.contact.hasFocusedInput() {
 				next := (a.section + 1) % 4
 				a.section = next
@@ -129,7 +127,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// delegate to active section
 	var cmd tea.Cmd
 	switch a.section {
 	case sectionBlogs:
@@ -147,9 +144,12 @@ func (a App) View() string {
 		return "Terminal too small. Please resize to at least 40×10."
 	}
 
-	topPad := lipgloss.NewStyle().Background(colorBg).Width(a.width).Render("")
+	s := a.styles
+	r := s.Renderer
+
+	topPad := r.NewStyle().Background(colorBg).Width(a.width).Render("")
 	nav := a.navBar()
-	sep := dimStyle.Render(strings.Repeat("─", a.width))
+	sep := s.Dim.Render(strings.Repeat(s.Sep(), a.width))
 	footer := a.footerBar()
 
 	var body string
@@ -168,6 +168,9 @@ func (a App) View() string {
 }
 
 func (a App) navBar() string {
+	s := a.styles
+	r := s.Renderer
+
 	type item struct {
 		label   string
 		key     string
@@ -184,14 +187,14 @@ func (a App) navBar() string {
 	for _, it := range items {
 		label := fmt.Sprintf("[%s] %s", it.key, it.label)
 		if it.section == a.section {
-			parts = append(parts, navItemActiveStyle.Render(label))
+			parts = append(parts, s.NavItemActive.Render(label))
 		} else {
-			parts = append(parts, navItemStyle.Render(label))
+			parts = append(parts, s.NavItem.Render(label))
 		}
 	}
 
 	bar := lipgloss.JoinHorizontal(lipgloss.Top, parts...)
-	return lipgloss.NewStyle().
+	return r.NewStyle().
 		Background(colorBg).
 		Width(a.width).
 		Align(lipgloss.Center).
@@ -199,13 +202,14 @@ func (a App) navBar() string {
 }
 
 func (a App) footerBar() string {
+	s := a.styles
 	var hints string
 	switch a.section {
 	case sectionBlogs:
 		if a.blogs.inPost() {
-			hints = "[↑↓] scroll  [q] back  [ctrl+c] quit"
+			hints = "[" + s.ArrowUp() + s.ArrowDown() + "] scroll  [q] back  [ctrl+c] quit"
 		} else {
-			hints = "[↑↓] navigate  [enter] read  [1/2/3/4] sections  [q] quit"
+			hints = "[" + s.ArrowUp() + s.ArrowDown() + "] navigate  [enter] read  [1/2/3/4] sections  [q] quit"
 		}
 	case sectionContact:
 		hints = "[tab] next field  [enter] submit  [1/2/3/4] sections  [ctrl+c] quit"
@@ -219,5 +223,5 @@ func (a App) footerBar() string {
 	if padding < 0 {
 		padding = 0
 	}
-	return footerStyle.Width(a.width).Render(hints + strings.Repeat(" ", padding))
+	return s.Footer.Width(a.width).Render(hints + strings.Repeat(" ", padding))
 }
