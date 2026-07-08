@@ -1,0 +1,183 @@
+---
+title: "aspi: The HTTP Client I Built Because I Was Tired of try/catch"
+pubDate: 2026-07-08
+description: aspi is a tiny, zero-dependency, type-safe HTTP client for TypeScript built on native fetch - three response modes, tagged error unions, and a benchmark suite that puts it up against axios, ky, got, ofetch, and superagent.
+tags:
+    - typescript
+    - javascript
+    - async
+published: true
+featured: true
+---
+
+> aspi, in one line: fetch, but every failure is a typed value you can switch on, instead of a throw you're hoping someone remembered to catch.
+
+A while back I wrote about [treating errors as first-class citizens](/blog/errors-as-first-class-citizens) — wrapping functions so they return `{ success, value }` or `{ success, error }` instead of throwing. That post ended with a wrapper utility and a promise to apply the idea properly somewhere real. `aspi` is that somewhere. It's the same philosophy, built specifically for the thing every frontend and backend TypeScript project eventually needs: an HTTP client that doesn't make you guess what a failed request looks like.
+
+### What is aspi
+
+`aspi` is a tiny, zero-runtime-dependency, type-safe HTTP client for TypeScript, built directly on native `fetch`. No Node `http` module underneath, no bundled polyfills — just `fetch`, wrapped in a fluent builder that tracks what can go wrong at the type level instead of leaving it to a docstring.
+
+```bash
+npm install aspi
+```
+
+```ts
+import { Aspi } from 'aspi';
+
+const api = new Aspi({
+  baseUrl: 'https://jsonplaceholder.typicode.com',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+const [data, error] = await api
+  .get('/todos/1')
+  .notFound(() => ({ message: 'Todo not found' }))
+  .json<{ id: number; title: string; completed: boolean }>();
+
+if (error) {
+  if (error.tag === 'aspiError') console.error(error.response.status);
+  if (error.tag === 'notFoundError') console.warn(error.data.message);
+  if (error.tag === 'jsonParseError') console.error(error.data.message);
+}
+
+if (data) console.log(data.title);
+```
+
+That `if (error.tag === ...)` chain is exhaustively checkable by TypeScript. `error` isn't `unknown` or a generic `Error` — it's a real discriminated union, and every branch you haven't handled yet is a branch TypeScript can still tell you about.
+
+### What it does
+
+The feature list reads like a checklist of things I got tired of re-implementing per project:
+
+- **Three response modes** — tuple `[data, error]`, a `Result` monad, or `throwable` — chosen per call, not baked into the whole library.
+- **Typed, tagged error unions** — every failure mode is a distinct, narrowable tag.
+- **Custom error mapping** — turn any HTTP status into your own structured error type.
+- **Retry with back-off** — fixed or dynamic delay, status-code filtering, custom predicates.
+- **Schema validation** — validate request bodies, query params, and responses via any [StandardSchemaV1](https://github.com/standard-schema/standard-schema) library (Zod, Valibot, Arktype).
+- **Middleware** — transform the outgoing request for every call via `.use()`.
+- **Capabilities** — plugin-level interception of the raw `fetch` call, for logging, tracing, or token refresh.
+
+The three response modes are the part worth slowing down on, because they're not three separate APIs — they're one request builder that changes shape based on the last mode-setting call:
+
+```ts
+// Tuple mode (default) — Go-style [value, error]
+const [data, error] = await api.get('/users/1').json<User>();
+
+// Result mode — a tagged Result<Ok, ErrorUnion>
+const result = await api.get('/users/1').withResult().json<User>();
+Result.match(result, {
+  onOk: ({ data }) => console.log(data.name),
+  onErr: (err) => console.error(err.tag, err),
+});
+
+// Throwable mode — parsed value directly, throws a typed error on failure
+try {
+  const { data } = await api.get('/users/1').throwable().json<User>();
+} catch (err) {
+  if (err.tag === 'aspiError') console.error(err.response.status);
+}
+```
+
+`throwable()`, `withResult()`, and `withTuple()` are mutually exclusive — the last one called wins, and `.withTuple()` exists purely to reset back to the default after a previous call. Custom errors compose the same way `.notFound()` does, just with a status code and tag you choose:
+
+```ts
+const [data, error] = await api
+  .post('/login')
+  .bodyJson({ email, password })
+  .error('rateLimitedError', 'TOO_MANY_REQUESTS', ({ response }) => ({
+    retryAfter: response.response.headers.get('Retry-After'),
+  }))
+  .json<{ token: string }>();
+
+if (error?.tag === 'rateLimitedError') {
+  console.warn('Retry after', error.data.retryAfter, 'seconds');
+}
+```
+
+And capabilities give you a hook below middleware, at the level of the raw `fetch` call itself — enough to implement something like transparent token refresh:
+
+```ts
+const tokenRefreshCapability: Capability = () => {
+  let isRefreshing = false;
+  return {
+    async run(runner) {
+      const res = await runner();
+      if (res.status !== 401 || isRefreshing) return res;
+      isRefreshing = true;
+      try {
+        await refreshTokens();
+      } finally {
+        isRefreshing = false;
+      }
+      return runner(); // retry the original request with the new token
+    },
+  };
+};
+```
+
+**A detail worth knowing if you go reading the source:** the mode-setting and config methods (`use()`, `throwable()`, `withResult()`, `error()`) mutate the same `Aspi` instance's private fields and then return `this`, re-cast to a new TypeScript type that reflects the change. `const throwableApi = api.throwable()` gives you a differently-*typed* handle, but `api` and `throwableApi` are the same object at runtime — calling `.throwable()` already flipped the original. It's a common trick in fluent builders (the type system tracks a state transition the runtime object doesn't actually need a new instance for), but it's the kind of thing that's invisible until you assign the return value to a variable with a different name than the one you called it on and wonder why both are "throwable" now.
+
+That accumulation is also how `.error()` builds up your error union over multiple calls. Each `.error(tag, status, cb)` widens the instance's type by one more tagged variant:
+
+```ts
+error<Tag extends string, A extends {}>(tag: Tag, status: HttpErrorStatus, cb: CustomErrorCb<TRequest, A>) {
+  this.#customErrorCbs[httpErrors[status]] = { cb, tag };
+  return this as Aspi<TRequest, Prettify<Opts & {
+    error: { [K in Tag | keyof Opts['error']]: K extends Tag ? CustomError<Tag, A> : Opts['error'][K] };
+  }>>;
+}
+```
+
+Chain `.notFound(cb).unauthorized(cb).error('rateLimitedError', ...)` and the resulting error type is the union of all three — not because aspi inspected your callbacks at runtime, but because each call's return type is a mapped type merging the new tag into whatever union existed before it.
+
+### What is different
+
+Put next to axios, ky, got, ofetch, and superagent, the gap isn't in raw feature count — most of these libraries have retry, middleware, and cancellation in some form. The gap is in what happens when a request fails:
+
+- **Every other one of the five is throw-only.** axios throws, ky throws, got throws, ofetch throws, superagent throws. None of them offer tuple or Result-style modes — you get `try`/`catch` and whatever shape of error object that library decided to throw (a generic `Error`, or at best a library-specific `HTTPError`/`FetchError` class you have to check `instanceof` for).
+- **aspi's errors are tagged unions, not exception classes.** `aspiError`, `networkError`, `jsonParseError`, `schemaParseError`, plus whatever custom tags you register — every one narrowable with a plain `if (error.tag === '...')`, no `instanceof` chain, no casting.
+- **Schema validation is built in, via the actual standard.** None of the five ship request/response schema validation out of the box. aspi validates against anything implementing StandardSchemaV1 — Zod, Valibot, Arktype — and a failed validation produces a `schemaParseError` in the same union as every other failure, before the network call even happens.
+- **Zero runtime dependencies**, tied with ky for the fewest of the six. axios carries 4, superagent 9, got 12 — each one is supply-chain surface aspi and ky simply don't have.
+
+The response-mode choice is the one I'd point to first, because it's the one that changes how you actually write calling code, not just how errors are shaped. A tuple-mode `aspi` call and a Go function that returns `(value, error)` read identically. A `throwable()` call, for the one spot in your codebase where a thrown error genuinely is the right shape (a route loader that already has an error boundary, say), reads exactly like the axios/ky/got call it's replacing. Same client, both shapes, chosen at the call site instead of baked into the whole library.
+
+### How is it better than the other one(s)
+
+I didn't want to just assert this, so I benchmarked it — aspi against axios, ky, got, ofetch, and superagent, on request overhead, bundle size, and feature surface, all hitting a local Node server so network latency isn't part of the measurement. [The full interactive report is here](https://tangerine-bunny-bf658a.netlify.app/); the highlights:
+
+- **Fastest per-request overhead of the six**, winning GET, POST, and error-handling outright.
+- **3.4 KB gzipped** — the smallest bundle of the six (axios is 17.3 KB, got is 49.5 KB).
+- **Zero runtime dependencies**, tied with ky, fewest of the six (got ships 12).
+- **82× faster to instantiate** than the slowest of the six (got).
+
+The per-call numbers, from a tinybench suite run on Bun against a local fixture server:
+
+| Benchmark | aspi | ofetch | ky | superagent | axios | got |
+| --- | --- | --- | --- | --- | --- | --- |
+| GET + JSON parse | **44.4 µs** | 45.5 µs | 50.4 µs | 59.6 µs | 79.3 µs | 91.5 µs |
+| POST + JSON body | **46.1 µs** | 49.5 µs | 57.0 µs | 62.9 µs | 87.0 µs | 98.6 µs |
+| 404, handled (no throw) | **45.9 µs** | 49.9 µs | 71.6 µs | 62.7 µs | 84.0 µs | 98.1 µs |
+| Client instantiation | **69.7 ns** | 94.8 ns | 190.5 ns | 118.2 ns | 4,363.8 ns | 5,683.1 ns |
+
+Worth calling out: the 404-handling row isn't just "aspi is fast at errors," it's fast *because it never throws*. Tuple mode returns the 404 as a value; every other client in that row is timed running inside a `try`/`catch`, paying for a thrown-and-caught exception on top of the request itself. The performance win there isn't a coincidence next to the "errors as values" pitch — it's a direct consequence of it.
+
+Retry is the one place aspi doesn't win, and I'm not going to pretend otherwise:
+
+| Retry (2 failures, then success) | ofetch | superagent | aspi | ky | got | axios |
+| --- | --- | --- | --- | --- | --- | --- |
+| Avg latency | **144.6 µs** | 191.2 µs | 3,047.7 µs | 3,269.5 µs | 3,643.5 µs | 3,721.9 µs |
+
+ofetch and superagent skip the wait entirely when a computed delay resolves to `0`. aspi, ky, got, and axios's manual retry loop all unconditionally call `setTimeout` even for a zero delay, and Node's timer granularity charges roughly ~1.5 ms per tick regardless — with two retries, that's the floor all four land on. Getting this table right took finding two real bugs in libraries that aren't mine: got's own `calculateDelay: () => 0` silently aborts the retry entirely (it treats a falsy return as "stop trying," not "retry immediately"), and ky's default backoff runs for real (0.3 × 2ⁿ seconds) unless you explicitly override its `delay` function — leave either default in place and you're not measuring retry speed, you're measuring whoever forgot to zero their own config. Both are corrected in the numbers above.
+
+The feature matrix tells the rest of the story in one table: tuple/Result/throwable modes and built-in schema validation are aspi-only among all six. Retry, middleware, and cancellation are roughly table stakes now — most of the six have some version. And aspi is honest about what it gives up for being fetch-native: no upload/download progress, no custom Node agent or proxy config, because `fetch` itself doesn't expose either. axios, got, and superagent buy those at the cost of 4–12 dependencies and 2–3× the per-call overhead of the fetch-native group.
+
+The report's own verdict, which I think holds up: for a TypeScript codebase on a modern runtime that doesn't need Node-specific proxy or progress plumbing, aspi wins on the things a fetch-native client should win on — least code shipped, least overhead per call, and error handling the compiler checks instead of a docstring you hope callers read. And the report is upfront that these are localhost, library-overhead numbers, not a promise about how fast your app will feel — real-world latency will still be dominated by the network and the server, not the client sitting in front of them.
+
+### Conclusion
+
+- **This is what "errors as values" looks like once you stop treating it as a blog-post exercise and ship it.** The wrapper utility from the earlier post and aspi's tagged error unions are the same idea; one just has retry, schema validation, and a benchmark suite attached.
+- **A tagged union beats an exception class for the same reason it always does.** `error.tag === 'notFoundError'` is checkable by the compiler. `err instanceof SomeHTTPError` is a runtime bet.
+- **Being fetch-native is a trade, not a strict win.** You give up Node-specific proxy and progress plumbing to get a client that runs anywhere `fetch` exists, at a fraction of the bundle weight. Know which side of that trade your project needs before picking a client based on a benchmark table alone — this one included.
+
+`aspi` is on [npm](https://www.npmjs.com/package/aspi) and [GitHub](https://github.com/harshtalks/aspi) if you want to poke at it, break it, or tell me the retry table is wrong.
