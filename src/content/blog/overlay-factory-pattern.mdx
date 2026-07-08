@@ -10,6 +10,17 @@ published: true
 featured: true
 ---
 
+import { Image } from "astro:assets";
+
+<Image
+    src="/overlay-factory-abstraction-meme.webp"
+    title={"we have abstraction at home"}
+    alt={"xkcd-style comic: an absurdly complex modern ML/cloud stack diagram, captioned 'all so I can make a video of a unicorn cat jumping into a box on the fly. I. AM. GOD.'"}
+    width={640}
+    height={960}
+    className="mx-auto"
+/>
+
 > The overlay problem: every modal, drawer, and confirmation box in your app ends up as its own `isOpen` boolean, reinvented by whoever needed one that day.
 
 Open any medium-sized React codebase and grep for `useState(false)`. I'll bet you money at least a third of the results are named `isOpen`, `isModalOpen`, or `showDialog`. Every one of them is attached to a `<Dialog>` or a `<Drawer>`. Every one of them was written by a different person on a different day who didn't know the other ones existed.
