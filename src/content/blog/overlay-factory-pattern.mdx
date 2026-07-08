@@ -1,0 +1,316 @@
+---
+title: The Overlay Factory Pattern
+pubDate: 2026-07-08
+description: Most write-ups on overlay state reach for one generic, promise-based modal manager. Here's the version I actually ship in production - a typed create/edit factory that backs either a Dialog or a Sheet, and knows exactly when to get out of the way.
+tags:
+    - typescript
+    - react
+    - patterns
+published: true
+featured: true
+---
+
+> The overlay problem: every modal, drawer, and confirmation box in your app ends up as its own `isOpen` boolean, reinvented by whoever needed one that day.
+
+Open any medium-sized React codebase and grep for `useState(false)`. I'll bet you money at least a third of the results are named `isOpen`, `isModalOpen`, or `showDialog`. Every one of them is attached to a `<Dialog>` or a `<Drawer>`. Every one of them was written by a different person on a different day who didn't know the other ones existed.
+
+Nobody names this as a problem because each individual instance looks so small. It's just one boolean. It's just one `useEffect` for the escape key. Then your app has forty of these, scattered across forty components, each reinventing focus management, each with a slightly different bug. Nobody can answer "how many overlays can be open at once?" because the answer lives in forty different files.
+
+The overlay factory pattern fixes this by moving overlay state out of components entirely, into small, typed, self-contained units. Let's build one from scratch — the wrong way first, so you can feel exactly where it breaks — before landing on the shape I actually ship in production.
+
+### Attempt 1 — the naive way
+
+> The default approach: each component that can trigger an overlay owns a boolean for it, and renders the overlay conditionally inline.
+
+```tsx
+// UserRow.tsx
+export const UserRow = ({ user }: { user: User }) => {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  return (
+    <tr>
+      <td>{user.name}</td>
+      <td>
+        <button onClick={() => setIsEditOpen(true)}>Edit</button>
+      </td>
+
+      {isEditOpen && (
+        <EditUserDialog user={user} onClose={() => setIsEditOpen(false)} />
+      )}
+    </tr>
+  );
+};
+```
+
+This works for exactly one row. It falls apart the moment there's more than one:
+
+- The dialog is mounted inside a `<tr>`. If it uses `position: fixed` and an ancestor has a `transform` or `filter` on it — Tailwind's `backdrop-blur` utilities do this constantly — the fixed positioning breaks silently. You'll fix it with a portal, then forget the portal in the next 39 dialogs.
+- Render a table with 200 rows and you've got 200 idle `isEditOpen` booleans in memory, 200 components that each need to know how to render an `EditUserDialog`.
+- There's no way to ask "is any overlay open right now?" from outside this component. Want to disable a global keyboard shortcut while a dialog is open? Good luck.
+
+### Attempt 2 — the single global modal
+
+> The common fix: hoist all overlay state into one Context with a reducer, so exactly one modal is mounted at the app root instead of one per row.
+
+```tsx
+// modal-context.tsx
+type ModalState =
+  | { type: "edit-user"; user: User }
+  | { type: "edit-product"; product: Product }
+  | { type: "none" };
+
+const ModalContext = createContext<{
+  state: ModalState;
+  dispatch: Dispatch<ModalState>;
+} | null>(null);
+
+export const ModalProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useState<ModalState>({ type: "none" });
+
+  return (
+    <ModalContext.Provider value={{ state, dispatch }}>
+      {children}
+      {state.type === "edit-user" && (
+        <EditUserDialog user={state.user} onClose={() => dispatch({ type: "none" })} />
+      )}
+      {state.type === "edit-product" && (
+        <EditProductDialog product={state.product} onClose={() => dispatch({ type: "none" })} />
+      )}
+    </ModalContext.Provider>
+  );
+};
+```
+
+This is genuinely better. One mount point, no portal footguns, and `UserRow` shrinks to a single `dispatch(...)` call. But two problems get worse as the app grows.
+
+**The provider's `if` chain grows forever.** Every new overlay means editing this one shared file — a permanent merge-conflict magnet, since every feature team touches it.
+
+**The `ModalState` union is exclusive by construction.** Only one overlay can ever be open. Editing a user while a product dialog happens to be open isn't possible with this shape — the second dispatch just clobbers the first.
+
+In practice, most overlays in a CRUD-heavy dashboard aren't confirmations at all — they're forms. The same drawer that creates a new record is also the drawer that edits an existing one. Whatever manages this state has to answer a harder question than "is it open": how do you reuse one form component for two different modes, and reset it cleanly every time the user switches targets, without last edit's data flashing into the next one?
+
+### Attempt 3 — the overlay factory I actually ship
+
+> The overlay factory pattern, in production form: instead of one shared reducer for every overlay in the app, build many small, independently-typed factories — one per form — each modeling exactly two states, `create` and `edit`, and each capable of backing either a Dialog or a Sheet.
+
+Each factory is scoped to one entity and mounted once, wherever it's needed. There's no single god-registry with string keys — `createOverlayFactory` is called once per form, and each call gives back its own isolated `Provider`, `Root`, and `useOverlay` hook.
+
+Start with the state shape. An overlay in this system is either creating something new, or editing something that already exists:
+
+```tsx
+export type OverlayModeState<TPayload, TMeta = undefined> =
+  | { mode: "create"; meta?: TMeta }
+  | { mode: "edit"; payload: TPayload; meta?: TMeta };
+```
+
+`TMeta` is there for the occasional extra bit of context an overlay needs that isn't part of the entity itself — a referring page, a default value seeded from wherever the overlay was triggered.
+
+```tsx
+interface OverlayContextValue<TPayload, TMeta = undefined> {
+  close: () => void;
+  isOpen: boolean;
+  onCloseComplete: () => void;
+  openCreate: (meta?: TMeta) => void;
+  openEdit: (payload: TPayload, meta?: TMeta) => void;
+  remountKey: string | null;
+  state: OverlayModeState<TPayload, TMeta> | null;
+}
+```
+
+Two open methods instead of one generic `open(key, props)` — `openCreate` and `openEdit` are named for what they actually do, and TypeScript enforces that `openEdit` always comes with a payload while `openCreate` never does.
+
+Now the factory function itself:
+
+```tsx
+export function createOverlayFactory<TPayload, TMeta = undefined>({
+  name,
+  getEditKey,
+  renderRoot,
+}: CreateOverlayFactoryOptions<TPayload, TMeta>) {
+  const OverlayContext = createContext<OverlayContextValue<TPayload, TMeta> | null>(null);
+
+  function useOverlay() {
+    const context = useContext(OverlayContext);
+    if (!context) {
+      throw new Error(`${name} must be used within ${name}.Provider`);
+    }
+    return context;
+  }
+
+  function Provider({ children }: { children: ReactNode }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [state, setState] = useState<OverlayModeState<TPayload, TMeta> | null>(null);
+
+    const isOpenRef = useRef(isOpen);
+    isOpenRef.current = isOpen;
+
+    const onCloseComplete = useCallback(() => {
+      if (!isOpenRef.current) setState(null);
+    }, []);
+
+    const remountKey =
+      state === null
+        ? null
+        : state.mode === "create"
+          ? "create"
+          : `edit:${getEditKey(state.payload)}`;
+
+    const value = useMemo<OverlayContextValue<TPayload, TMeta>>(
+      () => ({
+        close: () => setIsOpen(false),
+        isOpen,
+        onCloseComplete,
+        openCreate: (meta) => {
+          setState({ mode: "create", meta });
+          setIsOpen(true);
+        },
+        openEdit: (payload, meta) => {
+          setState({ mode: "edit", payload, meta });
+          setIsOpen(true);
+        },
+        remountKey,
+        state,
+      }),
+      [isOpen, state, remountKey, onCloseComplete],
+    );
+
+    return <OverlayContext.Provider value={value}>{children}</OverlayContext.Provider>;
+  }
+
+  function Root({ children }: { children: ReactNode }) {
+    const { isOpen, state, remountKey, close, onCloseComplete } = useOverlay();
+
+    return renderRoot({
+      children: state && remountKey ? <Fragment key={remountKey}>{children}</Fragment> : null,
+      close,
+      isOpen,
+      onOpenChange: (open) => { if (!open) close(); },
+      onOpenChangeComplete: (open) => { if (!open) onCloseComplete(); },
+      state: state ?? ({ mode: "create" } as OverlayModeState<TPayload, TMeta>),
+    });
+  }
+
+  return { Provider, Root, useOverlay };
+}
+```
+
+Two details here are doing real work, and neither is obvious until you've been burned by its absence.
+
+**`remountKey` forces a clean form reset.** When you open the edit drawer for record A, then close it and open it again for record B, the drawer component itself never unmounts — it's the same `<Root>` the whole time, just fed a different `state`. Without intervention, a form library will happily keep showing record A's stale values for a beat before your `useEffect` catches up and resets it. Wrapping `children` in `<Fragment key={remountKey}>` sidesteps the problem entirely: React's `key` prop exists specifically to signal "this is conceptually a different instance," so changing the key from `edit:a` to `edit:b` forces a full unmount-and-remount of whatever's inside. No effect, no manual reset call, no stale-data flash. It's the same trick as `key={item.id}` in a list, just applied to a form instead of a list item.
+
+**`onCloseComplete` waits for the exit animation to actually finish — because the naive version of this shipped a real bug.** The first version of this factory cleared `state` with a plain `useEffect` and a `setTimeout(250)` tuned to match the CSS transition duration. It worked fine in normal use and fell apart under fast clicking: close an overlay, reopen it before the 250ms timer fired, and the stale timer would still go off and wipe out the *new* state instead of the old one. A real race condition, reproducible by just double-clicking a row action. The fix was a `useRef` tracking the live `isOpen` value plus a stable `onCloseComplete` callback that only clears `state` if the overlay is still closed by the time it's actually called — and driving that call from the dialog primitive's own "transition finished" event instead of a timer tuned by hand.
+
+That event — `onOpenChangeComplete` — is a Base UI feature, and it's most of why these primitives are built on Base UI rather than the more established Radix UI. Base UI is the newer library, but it's also the direction things are heading — shadcn/ui itself is moving toward Base UI as a default — and getting a real "the exit transition is done" callback instead of hand-rolling one was worth the switch on its own. It's not a strictly better trade across the board, though: Base UI's answer to Radix's `Slot` — merging your own props, ref, and className onto whatever you pass to `render` — is still rougher around the edges than Radix's, and you'll hit composition cases it doesn't handle as cleanly. Worth knowing going in, not a reason to avoid it.
+
+The `isOpenRef` guard exists because `onCloseComplete` can still fire after the user has already reopened the overlay — a slow exit transition finishing late shouldn't be allowed to clear state for an overlay that's open again.
+
+The factory doesn't render anything itself — it delegates to a `renderRoot` you provide, which is how the same state machine backs either a small `Dialog` or a full `Sheet`:
+
+```tsx
+export function renderDialog<TPayload, TMeta = undefined>() {
+  return function DialogRender({ isOpen, onOpenChange, onOpenChangeComplete, children }: RenderRootArgs<TPayload, TMeta>) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
+        {children}
+      </Dialog>
+    );
+  };
+}
+
+export function renderSheet<TPayload, TMeta = undefined>() {
+  return function SheetRender({ isOpen, onOpenChange, onOpenChangeComplete, children }: RenderRootArgs<TPayload, TMeta>) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
+        <SheetContent>{children}</SheetContent>
+      </Sheet>
+    );
+  };
+}
+```
+
+A quick two-line form gets `renderDialog()`. A form with a dozen fields gets `renderSheet()`. The `Provider`/`Root`/`useOverlay` triple, the `create`/`edit` state machine, and the remount-key trick don't change either way.
+
+### Wiring it up
+
+Each form module declares and exports its own factory instance right next to the form itself:
+
+```tsx
+// user-form.tsx
+export const userSheet = createOverlayFactory<User>({
+  getEditKey: (user) => user.id,
+  name: "UserSheet",
+  renderRoot: renderSheet(),
+});
+
+export function UserSheetHost() {
+  const { state, close } = userSheet.useOverlay();
+  const editingUser = state?.mode === "edit" ? state.payload : null;
+
+  const mutation = useMutation({
+    mutationFn: editingUser ? updateUser : createUser,
+    onSuccess: close,
+  });
+
+  // ...form bound to `editingUser`'s fields as defaults, submitting via `mutation`
+}
+```
+
+Every overlay that needs to be reachable app-wide gets nested once, at the root:
+
+```tsx
+// action-shell.tsx
+export function ActionShell({ children }: { children: ReactNode }) {
+  return (
+    <userSheet.Provider>
+      <productSheet.Provider>
+        {children}
+        <userSheet.Root><UserSheetHost /></userSheet.Root>
+        <productSheet.Root><ProductSheetHost /></productSheet.Root>
+      </productSheet.Provider>
+    </userSheet.Provider>
+  );
+}
+```
+
+And triggering one from anywhere in the tree is a single hook call:
+
+```tsx
+// UserRow.tsx
+export const UserRow = ({ user }: { user: User }) => {
+  const { openEdit } = userSheet.useOverlay();
+
+  return (
+    <tr>
+      <td>{user.name}</td>
+      <td>
+        <button onClick={() => openEdit(user)}>Edit</button>
+      </td>
+    </tr>
+  );
+};
+```
+
+Overlays that only matter on one route don't need to live in the global shell at all — a single route component can nest its own `<featureSheet.Provider>` around itself and mount `<featureSheet.Root>` inline, scoping the whole thing to just that page.
+
+### Why fire-and-forget, not a promise
+
+There's a well-worn version of this pattern that shows up constantly in blog posts and modal-manager libraries: one generic `open(key, props)` that returns a promise, resolved from inside the overlay's own `onClose` — `const confirmed = await overlays.open("confirm", {...})`. It's a genuinely nice shape for a yes/no question, and if all you need is a styled `window.confirm()`, it's hard to beat. It's the wrong shape for a form, which is most of what this factory actually manages.
+
+A create/edit drawer already has its own notion of "am I done yet" — it's whatever `useMutation` is doing. Success, error, and pending states are already modeled, already drive the submit button's disabled state, already trigger a toast. Wrapping that in a promise from `open()` would just be a second, redundant place to track the same three states. `openEdit` and `openCreate` are fire-and-forget on purpose: they set up *what* to show, and the form itself — via its own mutation — decides when to call `close()`.
+
+The corollary is worth saying out loud: **not every overlay should go through this factory.** A destructive confirmation — "delete this record?" — isn't a create/edit form, doesn't need a payload preserved across renders, and doesn't benefit from the remount-key trick since there's no field state to reset. In practice I don't route those through here at all. A delete confirmation is an uncontrolled `AlertDialog` colocated directly with its trigger, with its own local `onOpenChange`. That's a deliberate inconsistency, not an oversight — forcing every overlay through one universal shape, whether that shape is a promise-returning generic registry or a create/edit union, is itself a decision, and it's the wrong one once you have overlays that genuinely don't fit.
+
+### Where this pattern draws the line
+
+- **No stacking, by design.** Each factory instance holds exactly one `isOpen`/`state` slot. Opening it again while it's already open just replaces the state — there's no queue. Two *different* factories (a user sheet and a product sheet) can absolutely be open at once, since they're independent contexts, but you'll never get two stacked instances of the same one, and for create/edit forms that's the correct behavior, not a limitation.
+- **No central registry.** There's no single file listing every overlay in the app the way attempt 2's reducer did. That's the point — new overlays don't require editing shared code — but it does mean "how many kinds of overlay does this app have" is a grep, not a lookup.
+- **Local, ephemeral UI state still uses plain `useState`.** A dropdown menu's open state, a tooltip's visibility — none of that goes through this factory. It's reserved for the overlays that carry real payload and need the create/edit lifecycle. Not every piece of UI that opens and closes is this pattern's problem to solve.
+- **The exit-animation-complete callback is load-bearing, and it isn't universal.** The two-step close only works because the underlying dialog primitive can tell you when its exit transition has genuinely finished. Not every headless UI library exposes that — check for it before porting this pattern onto one that doesn't, or you'll end up back at a hand-tuned timer and the bug it causes.
+
+### Conclusion
+
+- **Overlay state belongs outside the triggering component, but it doesn't need one grand unified shape to get there.** Many small, independently-typed factories beat one god-registry or one exclusive reducer — each overlay gets exactly the state machine it needs, no more.
+- **Most overlays in a real app are forms, not confirmations.** Design for create/edit first; let genuinely different interactions (a yes/no confirm) use a genuinely different, simpler mechanism instead of bending one abstraction to cover both.
+- **A well-placed `key` prop solves problems people reach for `useEffect` to solve.** Forcing a remount via `key={remountKey}` when the edit target changes is simpler, and more correct, than resetting form state manually after the fact.
+
+Don't reach for this on day one with two modals. Reach for it the day the third form component needs both a create mode and an edit mode, and you catch yourself about to copy-paste the same `useEffect(() => form.reset(...), [record.id])` for the third time this month.

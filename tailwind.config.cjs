@@ -99,7 +99,50 @@ module.exports = {
                 },
                 badge: "#F1F5F9",
                 badgeText: "#475569"
-            }
+            },
+            typography: ({ theme }) => ({
+                DEFAULT: {
+                    css: {
+                        code: {
+                            backgroundColor: theme("colors.badge"),
+                            color: theme("colors.badgeText"),
+                            borderRadius: theme("borderRadius.md"),
+                            padding: "0.2em 0.45em",
+                            fontWeight: "500",
+                            fontSize: "0.875em"
+                        },
+                        "code::before": {
+                            content: "none"
+                        },
+                        "code::after": {
+                            content: "none"
+                        },
+                        "pre code": {
+                            backgroundColor: "transparent",
+                            color: "inherit",
+                            padding: "0",
+                            borderRadius: "0",
+                            fontWeight: "inherit",
+                            fontSize: "inherit"
+                        },
+                        blockquote: {
+                            backgroundColor: theme("colors.gray.50"),
+                            color: theme("colors.gray.800"),
+                            borderLeftWidth: "0",
+                            borderRadius: theme("borderRadius.lg"),
+                            padding: "0.75rem 1.25rem",
+                            fontStyle: "normal",
+                            fontWeight: "400"
+                        },
+                        "blockquote p:first-of-type::before": {
+                            content: "none"
+                        },
+                        "blockquote p:last-of-type::after": {
+                            content: "none"
+                        }
+                    }
+                }
+            })
         }
     },
     plugins: [require("@tailwindcss/typography")]
